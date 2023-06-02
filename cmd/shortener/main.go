@@ -27,7 +27,7 @@ func shortenURL(w http.ResponseWriter, r *http.Request) {
 
 	url, err := io.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
 	urlID := Base62Encode(rand.Uint64())
@@ -35,7 +35,7 @@ func shortenURL(w http.ResponseWriter, r *http.Request) {
 	response := "http://" + r.Host + "/" + urlID
 
 	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 	w.Write([]byte(response))
 }
 
@@ -45,7 +45,7 @@ func getFullURL(w http.ResponseWriter, r *http.Request) {
 
 	val, ok := urlList[shortURL]
 	if !ok {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 	}
 
 	w.Header().Set("Location", val)
@@ -55,12 +55,12 @@ func getFullURL(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	mux := mux.NewRouter()
+	router := mux.NewRouter()
 
-	mux.HandleFunc(`/`, shortenURL).Methods("POST")
-	mux.HandleFunc(`/{id}`, getFullURL).Methods("GET")
+	router.HandleFunc(`/`, shortenURL).Methods("POST")
+	router.HandleFunc(`/{id}`, getFullURL).Methods("GET")
 
-	err := http.ListenAndServe(":8080", mux)
+	err := http.ListenAndServe(":8080", router)
 	if err != nil {
 		panic(err)
 	}
