@@ -7,8 +7,8 @@ import (
 )
 
 type Repository interface {
-	ShortenUrl(fullLink string) string
-	GetFullUrl(shortLink string) (string, error)
+	ShortenURL(fullLink string) string
+	GetFullURL(shortLink string) (string, error)
 }
 type InMemoryStorage struct {
 	Links map[string]string
