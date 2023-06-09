@@ -7,7 +7,7 @@ import (
 	"net/http"
 )
 
-func GetFullUrl(repository storage.Repository) http.HandlerFunc {
+func GetFullURL(repository storage.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		shortURL := mux.Vars(r)["id"]
 		v, err := repository.GetFullUrl(shortURL)
@@ -19,14 +19,14 @@ func GetFullUrl(repository storage.Repository) http.HandlerFunc {
 	}
 }
 
-func ShortenUrl(repository storage.Repository) http.HandlerFunc {
+func ShortenURL(repository storage.Repository) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		fullUrl, err := io.ReadAll(r.Body)
-		if err != nil || len(fullUrl) == 0 {
+		fullURL, err := io.ReadAll(r.Body)
+		if err != nil || len(fullURL) == 0 {
 			w.WriteHeader(http.StatusBadRequest)
 		}
 
-		response := "http://" + r.Host + "/" + repository.ShortenUrl(string(fullUrl))
+		response := "http://" + r.Host + "/" + repository.ShortenUrl(string(fullURL))
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)

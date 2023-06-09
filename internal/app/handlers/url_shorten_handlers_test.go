@@ -49,10 +49,12 @@ func TestGetFullURL(t *testing.T) {
 			r := httptest.NewRequest(tt.method, "/", nil)
 			r = mux.SetURLVars(r, map[string]string{"id": tt.shortLink})
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(GetFullUrl(mockStorage))
+			h := http.HandlerFunc(GetFullURL(mockStorage))
 			h(w, r)
 
 			result := w.Result()
+			defer result.Body.Close()
+
 			assert.Equal(t, tt.expectedLink, result.Header.Get("Location"))
 			assert.Equal(t, tt.expectedStatusCode, result.StatusCode)
 		})
@@ -91,10 +93,11 @@ func TestShortenURL(t *testing.T) {
 
 			r := httptest.NewRequest(tt.method, "/", strings.NewReader(tt.longLink))
 			w := httptest.NewRecorder()
-			h := http.HandlerFunc(ShortenUrl(mockStorage))
+			h := http.HandlerFunc(ShortenURL(mockStorage))
 			h(w, r)
 
 			result := w.Result()
+			defer result.Body.Close()
 
 			assert.Equal(t, tt.expectedStatusCode, result.StatusCode)
 			assert.Equal(t, tt.expectedContentType, result.Header.Get("Content-Type"))
