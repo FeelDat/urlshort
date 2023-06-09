@@ -20,14 +20,14 @@ func InitInMemoryStorage() *InMemoryStorage {
 	}
 }
 
-func (mapStorage InMemoryStorage) ShortenUrl(fullLink string) string {
+func (mapStorage InMemoryStorage) ShortenURL(fullLink string) string {
 
 	urlID := utils.Base62Encode(rand.Uint64())
 	mapStorage.Links[urlID] = string(fullLink)
 	return urlID
 }
 
-func (mapStorage InMemoryStorage) GetFullUrl(shortLink string) (string, error) {
+func (mapStorage InMemoryStorage) GetFullURL(shortLink string) (string, error) {
 
 	val, ok := mapStorage.Links[shortLink]
 	if !ok {
