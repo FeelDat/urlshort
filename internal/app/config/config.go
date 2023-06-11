@@ -15,7 +15,12 @@ type Config struct {
 }
 
 func NewConfig() (*Config, error) {
-	c := &Config{}
+	c := &Config{
+		ServerURL:  "localhost",
+		ServerPort: "8080",
+		BaseURL:    "localhost",
+		BasePort:   "8000",
+	}
 
 	flag.Func("a", "address to run the HTTP server on", func(serverAddress string) error {
 		serverURL, serverPort, err := splitAddress(serverAddress)
