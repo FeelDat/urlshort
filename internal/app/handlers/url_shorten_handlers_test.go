@@ -101,8 +101,9 @@ func TestShortenURL(t *testing.T) {
 	}
 
 	mockStorage := storage.InitInMemoryStorage()
+	mockAddress := "localhost:8888"
 
-	ts := httptest.NewServer(ShortenURL(mockStorage))
+	ts := httptest.NewServer(ShortenURL(mockStorage, mockAddress))
 	defer ts.Close()
 
 	for _, tt := range testCases {

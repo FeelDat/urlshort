@@ -24,7 +24,7 @@ func GetFullURL(repository storage.Repository) http.HandlerFunc {
 	}
 }
 
-func ShortenURL(repository storage.Repository) http.HandlerFunc {
+func ShortenURL(repository storage.Repository, baseUrl string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		fullURL, err := io.ReadAll(r.Body)
 		if err != nil || len(fullURL) == 0 {
@@ -32,7 +32,7 @@ func ShortenURL(repository storage.Repository) http.HandlerFunc {
 			return
 		}
 
-		response := "http://" + r.Host + "/" + repository.ShortenURL(string(fullURL))
+		response := "http://" + baseUrl + "/" + repository.ShortenURL(string(fullURL))
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
