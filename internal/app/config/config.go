@@ -19,7 +19,7 @@ func NewConfig() (*Config, error) {
 		ServerURL:  "localhost",
 		ServerPort: "8080",
 		BaseURL:    "localhost",
-		BasePort:   "8000",
+		BasePort:   "8080",
 	}
 
 	flag.Func("a", "address to run the HTTP server on", func(serverAddress string) error {
