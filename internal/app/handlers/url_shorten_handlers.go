@@ -5,6 +5,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func GetFullURL(repository storage.Repository) http.HandlerFunc {
@@ -32,7 +33,11 @@ func ShortenURL(repository storage.Repository, baseAddr string) http.HandlerFunc
 			return
 		}
 
-		response := "http://" + baseAddr + "/" + repository.ShortenURL(string(fullURL))
+		if !strings.HasPrefix(baseAddr, "http://") && !strings.HasPrefix(baseAddr, "https://") {
+			baseAddr = "http://" + baseAddr
+		}
+
+		response := baseAddr + "/" + repository.ShortenURL(string(fullURL))
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
