@@ -32,7 +32,7 @@ func ShortenURL(repository storage.Repository, baseAddr string) http.HandlerFunc
 			return
 		}
 
-		response := "http://" + baseAddr + "/" + repository.ShortenURL(string(fullURL))
+		response := baseAddr + "/" + repository.ShortenURL(string(fullURL))
 
 		w.Header().Set("Content-Type", "text/plain")
 		w.WriteHeader(http.StatusCreated)
