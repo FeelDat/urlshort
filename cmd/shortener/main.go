@@ -19,13 +19,13 @@ func main() {
 	r := chi.NewRouter()
 	mapStorage := storage.InitInMemoryStorage()
 
-	baseAddr := conf.BaseURL + ":" + conf.BasePort
+	baseAddr := conf.BaseAddress
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", handlers.ShortenURL(mapStorage, baseAddr))
 		r.Get("/{id}", handlers.GetFullURL(mapStorage))
 	})
-	serverAddr := conf.ServerURL + ":" + conf.ServerPort
-	err = http.ListenAndServe(serverAddr, r)
+
+	err = http.ListenAndServe(conf.ServerAddress, r)
 	if err != nil {
 		panic(err)
 	}

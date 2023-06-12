@@ -2,64 +2,46 @@ package config
 
 import (
 	"flag"
-	"fmt"
-	"net/url"
-	"strings"
+	"github.com/caarlos0/env"
+	"log"
 )
 
 type Config struct {
-	ServerURL  string
-	ServerPort string
-	BaseURL    string
-	BasePort   string
+	ServerAddress string `env:"SERVER_ADDRESS"`
+	BaseAddress   string `env:"BASE_URL"`
 }
 
 func NewConfig() (*Config, error) {
-	c := &Config{
-		ServerURL:  "localhost",
-		ServerPort: "8080",
-		BaseURL:    "localhost",
-		BasePort:   "8080",
+	c := &Config{}
+
+	err := env.Parse(c)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	flag.Func("a", "address to run the HTTP server on", func(serverAddress string) error {
-		serverURL, serverPort, err := splitAddress(serverAddress)
-		if err != nil {
-			return fmt.Errorf("invalid server address: %w", err)
+	flag.Func("a", "address to run the HTTP server on", func(input string) error {
+		if input != "" {
+			c.ServerAddress = input
 		}
-		c.ServerURL = serverURL
-		c.ServerPort = serverPort
 		return nil
 	})
 
-	flag.Func("b", "base address for resulting shortened URL", func(baseAddress string) error {
-		baseURL, basePort, err := splitAddress(baseAddress)
-		if err != nil {
-			return fmt.Errorf("invalid base URL: %w", err)
+	flag.Func("b", "base address for resulting shortened URL", func(input string) error {
+		if input != "" {
+			c.BaseAddress = input
 		}
-		c.BaseURL = baseURL
-		c.BasePort = basePort
 		return nil
 	})
 
 	flag.Parse()
 
+	// Only if no environment variable and no flag provided, use default
+	if c.ServerAddress == "" {
+		c.ServerAddress = "localhost:8080"
+	}
+	if c.BaseAddress == "" {
+		c.BaseAddress = "localhost:8080"
+	}
+
 	return c, nil
-}
-
-func splitAddress(address string) (string, string, error) {
-	if !strings.Contains(address, "://") {
-		address = "//" + address
-	}
-	u, err := url.Parse(address)
-	if err != nil {
-		return "", "", fmt.Errorf("failed to parse URL: %w", err)
-	}
-
-	hostParts := strings.Split(u.Host, ":")
-	if len(hostParts) != 2 {
-		return "", "", fmt.Errorf("expected host:port format, got %s", u.Host)
-	}
-
-	return hostParts[0], hostParts[1], nil
 }
