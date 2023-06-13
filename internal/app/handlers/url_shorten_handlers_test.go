@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"errors"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,31 @@ import (
 	"strings"
 	"testing"
 )
+
+type mockStorage struct {
+	Links map[string]string
+}
+
+func newMockMemoryStorage() storage.Repository {
+	return &mockStorage{
+		Links: make(map[string]string),
+	}
+}
+
+func (m *mockStorage) ShortenURL(fullURL string) string {
+
+	shortURL := "UySmre7XjFr"
+	m.Links[shortURL] = fullURL
+	return shortURL
+}
+
+func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
+	val, ok := m.Links[shortLink]
+	if !ok {
+		return "", errors.New("link does not exist")
+	}
+	return val, nil
+}
 
 func TestGetFullURL(t *testing.T) {
 	testCases := []struct {
@@ -42,8 +68,10 @@ func TestGetFullURL(t *testing.T) {
 		},
 	}
 
-	mockStorage := storage.NewInMemoryStorage()
-	mockHandler := NewHandler(mockStorage, "")
+	mckStorage := newMockMemoryStorage()
+	mckStorage.ShortenURL("https://practicum.yandex.ru/")
+
+	mockHandler := NewHandler(mckStorage, "")
 
 	router := chi.NewRouter()
 	router.Get("/{id}", mockHandler.GetFullURL)
@@ -104,7 +132,7 @@ func TestShortenURL(t *testing.T) {
 	mockHandler := NewHandler(mockStorage, "localhost:8080")
 
 	router := chi.NewRouter()
-	router.Get("/{id}", mockHandler.ShortenURL)
+	router.Post("/", mockHandler.ShortenURL)
 
 	ts := httptest.NewServer(router)
 	defer ts.Close()

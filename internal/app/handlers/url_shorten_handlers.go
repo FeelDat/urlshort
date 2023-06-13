@@ -39,6 +39,7 @@ func (h *Handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Location", v)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
+
 func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	fullURL, err := io.ReadAll(r.Body)
 	if err != nil || len(fullURL) == 0 {
@@ -60,41 +61,3 @@ func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
-
-//func GetFullURL(repository storage.Repository) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		shortURL := chi.URLParam(r, "id")
-//		if shortURL == "" {
-//			w.WriteHeader(http.StatusBadRequest)
-//			return
-//		}
-//		v, err := repository.GetFullURL(shortURL)
-//		if err != nil {
-//			w.WriteHeader(http.StatusBadRequest)
-//			return
-//		}
-//		w.Header().Set("Location", v)
-//		w.WriteHeader(http.StatusTemporaryRedirect)
-//	}
-//}
-
-//func ShortenURL(repository storage.Repository, baseAddr string) http.HandlerFunc {
-//	return func(w http.ResponseWriter, r *http.Request) {
-//		fullURL, err := io.ReadAll(r.Body)
-//		if err != nil || len(fullURL) == 0 {
-//			w.WriteHeader(http.StatusBadRequest)
-//			return
-//		}
-//
-//		if !strings.HasPrefix(baseAddr, "http://") && !strings.HasPrefix(baseAddr, "https://") {
-//			baseAddr = "http://" + baseAddr
-//		}
-//
-//		response := baseAddr + "/" + repository.ShortenURL(string(fullURL))
-//
-//		w.Header().Set("Content-Type", "text/plain")
-//		w.WriteHeader(http.StatusCreated)
-//		w.Write([]byte(response))
-//
-//	}
-//}
