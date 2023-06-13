@@ -42,11 +42,11 @@ func TestGetFullURL(t *testing.T) {
 		},
 	}
 
-	mockStorage := storage.InitInMemoryStorage()
-	mockStorage.Links["UySmre7XjFr"] = "https://practicum.yandex.ru/"
+	mockStorage := storage.NewInMemoryStorage()
+	mockHandler := NewHandler(mockStorage, "")
 
 	router := chi.NewRouter()
-	router.Get("/{id}", GetFullURL(mockStorage))
+	router.Get("/{id}", mockHandler.GetFullURL)
 
 	ts := httptest.NewServer(router)
 	defer ts.Close()
@@ -100,10 +100,13 @@ func TestShortenURL(t *testing.T) {
 		},
 	}
 
-	mockStorage := storage.InitInMemoryStorage()
-	mockAddress := "localhost:8888"
+	mockStorage := storage.NewInMemoryStorage()
+	mockHandler := NewHandler(mockStorage, "localhost:8080")
 
-	ts := httptest.NewServer(ShortenURL(mockStorage, mockAddress))
+	router := chi.NewRouter()
+	router.Get("/{id}", mockHandler.ShortenURL)
+
+	ts := httptest.NewServer(router)
 	defer ts.Close()
 
 	for _, tt := range testCases {
@@ -111,7 +114,6 @@ func TestShortenURL(t *testing.T) {
 
 			r, err := http.NewRequest(tt.method, ts.URL+"/", strings.NewReader(tt.longLink))
 			require.NoError(t, err)
-
 			resp, err := ts.Client().Do(r)
 			require.NoError(t, err)
 

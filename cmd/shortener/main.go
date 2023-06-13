@@ -17,12 +17,12 @@ func main() {
 	}
 
 	r := chi.NewRouter()
-	mapStorage := storage.InitInMemoryStorage()
+	mapStorage := storage.NewInMemoryStorage()
+	h := handlers.NewHandler(mapStorage, conf.BaseAddress)
 
-	baseAddr := conf.BaseAddress
 	r.Route("/", func(r chi.Router) {
-		r.Post("/", handlers.ShortenURL(mapStorage, baseAddr))
-		r.Get("/{id}", handlers.GetFullURL(mapStorage))
+		r.Post("/", h.ShortenURL)
+		r.Get("/{id}", h.GetFullURL)
 	})
 
 	err = http.ListenAndServe(conf.ServerAddress, r)
