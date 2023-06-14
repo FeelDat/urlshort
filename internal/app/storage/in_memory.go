@@ -11,26 +11,26 @@ type Repository interface {
 	GetFullURL(shortLink string) (string, error)
 }
 
-type InMemoryStorage struct {
+type inMemoryStorage struct {
 	Links map[string]string
 }
 
 func NewInMemoryStorage() Repository {
-	return &InMemoryStorage{
+	return &inMemoryStorage{
 		Links: make(map[string]string),
 	}
 }
 
-func (mapStorage *InMemoryStorage) ShortenURL(fullLink string) string {
+func (s *inMemoryStorage) ShortenURL(fullLink string) string {
 
 	urlID := utils.Base62Encode(rand.Uint64())
-	mapStorage.Links[urlID] = string(fullLink)
+	s.Links[urlID] = string(fullLink)
 	return urlID
 }
 
-func (mapStorage *InMemoryStorage) GetFullURL(shortLink string) (string, error) {
+func (s *inMemoryStorage) GetFullURL(shortLink string) (string, error) {
 
-	val, ok := mapStorage.Links[shortLink]
+	val, ok := s.Links[shortLink]
 	if !ok {
 		return "", errors.New("link does not exist")
 	}

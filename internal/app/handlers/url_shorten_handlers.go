@@ -13,19 +13,19 @@ type HandlerInterface interface {
 	ShortenURL(w http.ResponseWriter, r *http.Request)
 }
 
-type Handler struct {
+type handler struct {
 	repo        storage.Repository
 	baseAddress string
 }
 
 func NewHandler(repo storage.Repository, baseAddress string) HandlerInterface {
-	return &Handler{
+	return &handler{
 		repo:        repo,
 		baseAddress: baseAddress,
 	}
 }
 
-func (h *Handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
+func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
 	if shortURL == "" {
 		w.WriteHeader(http.StatusBadRequest)
@@ -40,7 +40,7 @@ func (h *Handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (h *Handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	fullURL, err := io.ReadAll(r.Body)
 	if err != nil || len(fullURL) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
