@@ -23,8 +23,11 @@ func main() {
 	}
 
 	loggerMiddleware := middleware.NewLoggerMiddleware(logger)
+
 	r := chi.NewRouter()
+
 	mapStorage := storage.NewInMemoryStorage()
+
 	h := handlers.NewHandler(mapStorage, conf.BaseAddress)
 
 	r.Use(loggerMiddleware.LoggerMiddleware)
