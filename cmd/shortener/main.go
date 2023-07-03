@@ -33,6 +33,7 @@ func main() {
 	r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
+		r.Post("/api/shorten", h.ShortenUrlJson)
 		r.Get("/{id}", h.GetFullURL)
 	})
 

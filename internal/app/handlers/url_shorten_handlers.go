@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"bytes"
+	"encoding/json"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/go-chi/chi/v5"
 	"io"
@@ -8,9 +10,18 @@ import (
 	"strings"
 )
 
+type jsonRequest struct {
+	Url string `json:"url"`
+}
+
+type jsonReply struct {
+	Result string `json:"result"`
+}
+
 type HandlerInterface interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
+	ShortenUrlJson(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {
@@ -38,6 +49,45 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Location", v)
 	w.WriteHeader(http.StatusTemporaryRedirect)
+}
+
+func (h *handler) ShortenUrlJson(w http.ResponseWriter, r *http.Request) {
+
+	var buf bytes.Buffer
+	var request jsonRequest
+	var reply jsonReply
+
+	_, err := buf.ReadFrom(r.Body)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if err = json.Unmarshal(buf.Bytes(), &request); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	if !strings.HasPrefix(h.baseAddress, "http://") && !strings.HasPrefix(h.baseAddress, "https://") {
+		h.baseAddress = "http://" + h.baseAddress
+	}
+
+	reply.Result = h.baseAddress + "/" + h.repo.ShortenURL(string(request.Url))
+
+	resp, err := json.Marshal(reply)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/plain")
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write([]byte(resp))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 }
 
 func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
