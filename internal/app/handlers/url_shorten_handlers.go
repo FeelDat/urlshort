@@ -11,7 +11,7 @@ import (
 )
 
 type jsonRequest struct {
-	Url string `json:"url"`
+	URL string `json:"url"`
 }
 
 type jsonReply struct {
@@ -72,7 +72,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		h.baseAddress = "http://" + h.baseAddress
 	}
 
-	reply.Result = h.baseAddress + "/" + h.repo.ShortenURL(string(request.Url))
+	reply.Result = h.baseAddress + "/" + h.repo.ShortenURL(string(request.URL))
 
 	resp, err := json.Marshal(reply)
 	if err != nil {
