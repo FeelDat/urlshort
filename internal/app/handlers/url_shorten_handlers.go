@@ -21,7 +21,7 @@ type jsonReply struct {
 type HandlerInterface interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
-	ShortenUrlJson(w http.ResponseWriter, r *http.Request)
+	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {
@@ -51,7 +51,7 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-func (h *handler) ShortenUrlJson(w http.ResponseWriter, r *http.Request) {
+func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
 	var request jsonRequest
