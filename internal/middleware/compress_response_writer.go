@@ -11,5 +11,9 @@ type gzipResponseWriter struct {
 }
 
 func (grw *gzipResponseWriter) Write(b []byte) (int, error) {
+	contentType := grw.Header().Get("Content-Type")
+	if contentType != "application/json" && contentType != "text/html" {
+		grw.Write(b)
+	}
 	return grw.Writer.Write(b)
 }

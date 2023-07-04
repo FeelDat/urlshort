@@ -25,20 +25,13 @@ func (m *CompressMiddleware) CompressMiddleware(next http.Handler) http.Handler 
 			http.Error(w, "Invalid gzip content", http.StatusBadRequest)
 			return
 		}
-
 		r.Body = reader
-		defer reader.Close()
-
 		next.ServeHTTP(w, r)
 
 		contentType := w.Header().Get("Content-Type")
 		if contentType != "application/json" && contentType != "text/html" {
-			next.ServeHTTP(w, r)
 			return
 		}
-
-		w.Header().Set("Content-Encoding", "gzip")
-
 		gzipWriter := gzip.NewWriter(w)
 		defer gzipWriter.Close()
 
