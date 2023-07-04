@@ -7,7 +7,7 @@ import (
 
 type gzipResponseWriter struct {
 	http.ResponseWriter
-	io.Writer
+	Writer io.Writer
 }
 
 func (grw *gzipResponseWriter) Write(b []byte) (int, error) {

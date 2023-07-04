@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"compress/gzip"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -21,13 +22,27 @@ func (m *CompressMiddleware) CompressMiddleware(next http.Handler) http.Handler 
 			return
 		}
 
+		gz, err := gzip.NewReader(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer gz.Close()
+
+		body, err := io.ReadAll(gz)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(body)
+		next.ServeHTTP(w, r)
+
 		contentType := w.Header().Get("Content-Type")
 		if contentType != "application/json" && contentType != "text/html" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// Устанавливаем заголовок Content-Encoding в gzip
 		w.Header().Set("Content-Encoding", "gzip")
 
 		// Создаем gzip.Writer для сжатия ответа
