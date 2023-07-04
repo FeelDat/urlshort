@@ -28,7 +28,11 @@ func main() {
 
 	r := chi.NewRouter()
 
-	mapStorage := storage.NewInMemoryStorage(conf.FilePath)
+	mapStorage, err := storage.NewInMemoryStorage(conf.FilePath)
+
+	if err != nil {
+		logger.Fatal(err)
+	}
 
 	h := handlers.NewHandler(mapStorage, conf)
 

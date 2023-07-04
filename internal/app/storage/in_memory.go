@@ -21,15 +21,23 @@ type URLInfo struct {
 }
 
 type inMemoryStorage struct {
-	Links    map[string]string
-	filePath string
+	Links   map[string]string
+	file    *os.File
+	encoder *json.Encoder
 }
 
-func NewInMemoryStorage(filePath string) Repository {
-	return &inMemoryStorage{
-		Links:    make(map[string]string),
-		filePath: filePath,
+func NewInMemoryStorage(filePath string) (Repository, error) {
+	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
 	}
+
+	return &inMemoryStorage{
+		Links:   make(map[string]string),
+		file:    file,
+		encoder: json.NewEncoder(file),
+	}, err
+
 }
 
 func (s *inMemoryStorage) ShortenURL(fullLink string) (string, error) {
@@ -37,25 +45,20 @@ func (s *inMemoryStorage) ShortenURL(fullLink string) (string, error) {
 	urlID := utils.Base62Encode(rand.Uint64())
 	s.Links[urlID] = string(fullLink)
 
-	if s.filePath != "" {
-		f, err := os.OpenFile(s.filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
-		if err != nil {
-			return "", err
-		}
-		defer f.Close()
+	urlInfo := URLInfo{
+		UUID:        uuid.NewString(),
+		ShortURL:    urlID,
+		OriginalURL: fullLink,
+	}
 
-		urlInfo := URLInfo{
-			UUID:        uuid.NewString(),
-			ShortURL:    urlID,
-			OriginalURL: fullLink,
-		}
+	data, err := json.Marshal(&urlInfo)
+	if err != nil {
+		return "", err
+	}
 
-		data, err := json.Marshal(&urlInfo)
-		if err != nil {
-			return "", err
-		}
-
-		f.Write(data)
+	_, err = s.file.Write(data)
+	if err != nil {
+		return "", err
 	}
 
 	return urlID, nil
