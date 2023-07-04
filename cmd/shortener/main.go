@@ -4,9 +4,10 @@ import (
 	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/handlers"
 	"github.com/FeelDat/urlshort/internal/app/storage"
+	"github.com/FeelDat/urlshort/internal/custommiddleware"
 	logger2 "github.com/FeelDat/urlshort/internal/logger"
-	"github.com/FeelDat/urlshort/internal/middleware"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"net/http"
 )
 
@@ -22,8 +23,8 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	loggerMiddleware := middleware.NewLoggerMiddleware(logger)
-	compressMiddleware := middleware.NewCompressMiddleware()
+	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
+	compressMiddleware := custommiddleware.NewCompressMiddleware()
 
 	r := chi.NewRouter()
 
@@ -31,6 +32,9 @@ func main() {
 
 	h := handlers.NewHandler(mapStorage, conf.BaseAddress)
 
+	r.Use(middleware.Compress(5,
+		"application/json"+
+			"text/html"))
 	r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Use(compressMiddleware.CompressMiddleware)
 	r.Route("/", func(r chi.Router) {

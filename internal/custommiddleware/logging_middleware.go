@@ -1,4 +1,4 @@
-package middleware
+package custommiddleware
 
 import (
 	"go.uber.org/zap"
