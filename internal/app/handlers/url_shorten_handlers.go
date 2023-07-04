@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/go-chi/chi/v5"
 	"io"
@@ -25,14 +26,14 @@ type HandlerInterface interface {
 }
 
 type handler struct {
-	repo        storage.Repository
-	baseAddress string
+	inMemoryRepo storage.Repository
+	conf         *config.Config
 }
 
-func NewHandler(repo storage.Repository, baseAddress string) HandlerInterface {
+func NewHandler(inMemoryRepo storage.Repository, conf *config.Config) HandlerInterface {
 	return &handler{
-		repo:        repo,
-		baseAddress: baseAddress,
+		inMemoryRepo: inMemoryRepo,
+		conf:         conf,
 	}
 }
 
@@ -42,7 +43,7 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	v, err := h.repo.GetFullURL(shortURL)
+	v, err := h.inMemoryRepo.GetFullURL(shortURL)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -68,11 +69,16 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(h.baseAddress, "http://") && !strings.HasPrefix(h.baseAddress, "https://") {
-		h.baseAddress = "http://" + h.baseAddress
+	if !strings.HasPrefix(h.conf.BaseAddress, "http://") && !strings.HasPrefix(h.conf.BaseAddress, "https://") {
+		h.conf.BaseAddress = "http://" + h.conf.BaseAddress
 	}
 
-	reply.Result = h.baseAddress + "/" + h.repo.ShortenURL(string(request.URL))
+	shortURL, err := h.inMemoryRepo.ShortenURL(string(request.URL))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	reply.Result = h.conf.BaseAddress + "/" + shortURL
 
 	resp, err := json.Marshal(reply)
 	if err != nil {
@@ -97,11 +103,16 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(h.baseAddress, "http://") && !strings.HasPrefix(h.baseAddress, "https://") {
-		h.baseAddress = "http://" + h.baseAddress
+	if !strings.HasPrefix(h.conf.BaseAddress, "http://") && !strings.HasPrefix(h.conf.BaseAddress, "https://") {
+		h.conf.BaseAddress = "http://" + h.conf.BaseAddress
 	}
 
-	response := h.baseAddress + "/" + h.repo.ShortenURL(string(fullURL))
+	shortURL, err := h.inMemoryRepo.ShortenURL(string(fullURL))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+	}
+
+	response := h.conf.BaseAddress + "/" + shortURL
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)

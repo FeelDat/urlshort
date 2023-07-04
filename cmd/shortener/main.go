@@ -28,9 +28,9 @@ func main() {
 
 	r := chi.NewRouter()
 
-	mapStorage := storage.NewInMemoryStorage()
+	mapStorage := storage.NewInMemoryStorage(conf.FilePath)
 
-	h := handlers.NewHandler(mapStorage, conf.BaseAddress)
+	h := handlers.NewHandler(mapStorage, conf)
 
 	r.Use(middleware.Compress(5,
 		"application/json"+
