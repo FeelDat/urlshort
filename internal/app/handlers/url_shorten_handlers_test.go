@@ -42,6 +42,13 @@ func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
 	return val, nil
 }
 
+func (s *mockStorage) Close() error {
+	if s.file != nil {
+		return s.file.Close()
+	}
+	return nil
+}
+
 func TestGetFullURL(t *testing.T) {
 	testCases := []struct {
 		name               string
@@ -74,7 +81,8 @@ func TestGetFullURL(t *testing.T) {
 	}
 
 	mckStorage, _ := newMockMemoryStorage()
-	mckStorage.ShortenURL("https://practicum.yandex.ru/")
+	_, err := mckStorage.ShortenURL("https://practicum.yandex.ru/")
+	require.NoError(t, err)
 
 	mockHandler := NewHandler(mckStorage, &config.Config{})
 

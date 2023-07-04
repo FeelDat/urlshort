@@ -29,6 +29,11 @@ func main() {
 	r := chi.NewRouter()
 
 	mapStorage, err := storage.NewInMemoryStorage(conf.FilePath)
+	defer func() {
+		if err := mapStorage.Close(); err != nil {
+			logger.Error("Failed to close the file", err)
+		}
+	}()
 
 	if err != nil {
 		logger.Fatal(err)

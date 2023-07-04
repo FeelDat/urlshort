@@ -12,6 +12,7 @@ import (
 type Repository interface {
 	ShortenURL(fullLink string) (string, error)
 	GetFullURL(shortLink string) (string, error)
+	Close() error
 }
 
 type URLInfo struct {
@@ -71,4 +72,11 @@ func (s *inMemoryStorage) GetFullURL(shortLink string) (string, error) {
 		return "", errors.New("link does not exist")
 	}
 	return val, nil
+}
+
+func (s *inMemoryStorage) Close() error {
+	if s.file != nil {
+		return s.file.Close()
+	}
+	return nil
 }
