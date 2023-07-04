@@ -103,7 +103,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	response := h.baseAddress + "/" + h.repo.ShortenURL(string(fullURL))
 
-	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Content-Type", "text/html")
 	w.WriteHeader(http.StatusCreated)
 	_, err = w.Write([]byte(response))
 	if err != nil {
