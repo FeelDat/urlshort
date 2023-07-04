@@ -23,6 +23,7 @@ func main() {
 	}
 
 	loggerMiddleware := middleware.NewLoggerMiddleware(logger)
+	compressMiddleware := middleware.NewCompressMiddleware()
 
 	r := chi.NewRouter()
 
@@ -31,6 +32,7 @@ func main() {
 	h := handlers.NewHandler(mapStorage, conf.BaseAddress)
 
 	r.Use(loggerMiddleware.LoggerMiddleware)
+	r.Use(compressMiddleware.CompressMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
 		r.Post("/api/shorten", h.ShortenURLJSON)

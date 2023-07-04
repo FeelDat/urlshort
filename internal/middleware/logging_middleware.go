@@ -6,17 +6,17 @@ import (
 	"time"
 )
 
-type Middleware struct {
+type LoggerMiddleware struct {
 	logger *zap.SugaredLogger
 }
 
-func NewLoggerMiddleware(logger *zap.SugaredLogger) *Middleware {
-	return &Middleware{
+func NewLoggerMiddleware(logger *zap.SugaredLogger) *LoggerMiddleware {
+	return &LoggerMiddleware{
 		logger: logger,
 	}
 }
 
-func (m *Middleware) LoggerMiddleware(next http.Handler) http.Handler {
+func (m *LoggerMiddleware) LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		responseData := &responseData{
