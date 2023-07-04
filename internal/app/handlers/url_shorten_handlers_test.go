@@ -42,7 +42,7 @@ func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
 	return val, nil
 }
 
-func (s *mockStorage) Close() error {
+func (m *mockStorage) Close() error {
 	if s.file != nil {
 		return s.file.Close()
 	}
