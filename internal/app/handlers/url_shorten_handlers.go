@@ -5,10 +5,10 @@ import (
 	"encoding/json"
 	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/storage"
+	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
-	"strings"
 )
 
 type jsonRequest struct {
@@ -69,9 +69,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(h.conf.BaseAddress, "http://") && !strings.HasPrefix(h.conf.BaseAddress, "https://") {
-		h.conf.BaseAddress = "http://" + h.conf.BaseAddress
-	}
+	h.conf.BaseAddress = utils.AddPrefix(h.conf.BaseAddress)
 
 	shortURL, err := h.inMemoryRepo.ShortenURL(string(request.URL))
 	if err != nil {
@@ -103,9 +101,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !strings.HasPrefix(h.conf.BaseAddress, "http://") && !strings.HasPrefix(h.conf.BaseAddress, "https://") {
-		h.conf.BaseAddress = "http://" + h.conf.BaseAddress
-	}
+	h.conf.BaseAddress = utils.AddPrefix(h.conf.BaseAddress)
 
 	shortURL, err := h.inMemoryRepo.ShortenURL(string(fullURL))
 	if err != nil {
