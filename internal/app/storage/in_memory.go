@@ -28,9 +28,15 @@ type inMemoryStorage struct {
 }
 
 func NewInMemoryStorage(filePath string) (Repository, error) {
-	file, err := os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, err
+
+	var file *os.File
+	var err error
+	//Does it need to be off if "" ?
+	if filePath != "" {
+		file, err = os.OpenFile(filePath, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &inMemoryStorage{

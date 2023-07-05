@@ -147,6 +147,8 @@ func TestShortenURL(t *testing.T) {
 		BaseAddress:   "localhost:8080",
 		FilePath:      ""})
 
+	defer os.Remove("short-url-db.json")
+
 	router := chi.NewRouter()
 	router.Post("/", mockHandler.ShortenURL)
 
@@ -156,6 +158,63 @@ func TestShortenURL(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 
+			r, err := http.NewRequest(tt.method, ts.URL+"/", strings.NewReader(tt.longLink))
+			require.NoError(t, err)
+			resp, err := ts.Client().Do(r)
+			require.NoError(t, err)
+
+			defer resp.Body.Close()
+
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, tt.expectedContentType, resp.Header.Get("Content-Type"))
+
+		})
+	}
+}
+
+func Test_handler_ShortenURLJSON(t *testing.T) {
+
+	testCases := []struct {
+		name                string
+		longLink            string
+		method              string
+		expectedStatusCode  int
+		expectedContentType string
+	}{
+		{
+			name:                "successful test",
+			longLink:            "https://practicum.yandex.ru/",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusCreated,
+			expectedContentType: "text/plain",
+		},
+		{
+			name:                "no link",
+			longLink:            "",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "",
+		},
+	}
+
+	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
+	mockHandler := NewHandler(mockStorage, &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseAddress:   "localhost:8080",
+		FilePath:      ""})
+
+	defer os.Remove("short-url-db.json")
+
+	router := chi.NewRouter()
+	router.Post("/", mockHandler.ShortenURL)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
 			r, err := http.NewRequest(tt.method, ts.URL+"/", strings.NewReader(tt.longLink))
 			require.NoError(t, err)
 			resp, err := ts.Client().Do(r)
