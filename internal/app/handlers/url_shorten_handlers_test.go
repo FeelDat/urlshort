@@ -1,32 +1,37 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
+	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 )
 
 type mockStorage struct {
-	Links map[string]string
+	Links   map[string]string
+	file    *os.File
+	encoder *json.Encoder
 }
 
-func newMockMemoryStorage() storage.Repository {
+func newMockMemoryStorage() (storage.Repository, error) {
 	return &mockStorage{
 		Links: make(map[string]string),
-	}
+	}, nil
 }
 
-func (m *mockStorage) ShortenURL(fullURL string) string {
+func (m *mockStorage) ShortenURL(fullURL string) (string, error) {
 
 	shortURL := "UySmre7XjFr"
 	m.Links[shortURL] = fullURL
-	return shortURL
+	return shortURL, nil
 }
 
 func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
@@ -35,6 +40,13 @@ func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
 		return "", errors.New("link does not exist")
 	}
 	return val, nil
+}
+
+func (m *mockStorage) Close() error {
+	if m.file != nil {
+		return m.file.Close()
+	}
+	return nil
 }
 
 func TestGetFullURL(t *testing.T) {
@@ -68,10 +80,11 @@ func TestGetFullURL(t *testing.T) {
 		},
 	}
 
-	mckStorage := newMockMemoryStorage()
-	mckStorage.ShortenURL("https://practicum.yandex.ru/")
+	mckStorage, _ := newMockMemoryStorage()
+	_, err := mckStorage.ShortenURL("https://practicum.yandex.ru/")
+	require.NoError(t, err)
 
-	mockHandler := NewHandler(mckStorage, "")
+	mockHandler := NewHandler(mckStorage, &config.Config{})
 
 	router := chi.NewRouter()
 	router.Get("/{id}", mockHandler.GetFullURL)
@@ -128,8 +141,11 @@ func TestShortenURL(t *testing.T) {
 		},
 	}
 
-	mockStorage := storage.NewInMemoryStorage()
-	mockHandler := NewHandler(mockStorage, "localhost:8080")
+	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
+	mockHandler := NewHandler(mockStorage, &config.Config{
+		ServerAddress: "localhost:8080",
+		BaseAddress:   "localhost:8080",
+		FilePath:      ""})
 
 	router := chi.NewRouter()
 	router.Post("/", mockHandler.ShortenURL)
