@@ -3,9 +3,10 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/storage"
+	"github.com/FeelDat/urlshort/internal/app/storage/mocks"
 	"github.com/go-chi/chi/v5"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -21,7 +22,7 @@ type mockStorage struct {
 	encoder *json.Encoder
 }
 
-func newMockMemoryStorage() (storage.Repository, error) {
+func newMockMemoryStorage() (storage.InMemoryRepository, error) {
 	return &mockStorage{
 		Links: make(map[string]string),
 	}, nil
@@ -84,7 +85,12 @@ func TestGetFullURL(t *testing.T) {
 	_, err := mckStorage.ShortenURL("https://practicum.yandex.ru/")
 	require.NoError(t, err)
 
-	mockHandler := NewHandler(mckStorage, &config.Config{})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockDatabaseRepository(ctrl)
+
+	mockHandler := NewHandler(mckStorage, "http://localhost:8080", m)
 
 	router := chi.NewRouter()
 	router.Get("/{id}", mockHandler.GetFullURL)
@@ -141,11 +147,13 @@ func TestShortenURL(t *testing.T) {
 		},
 	}
 
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockDatabaseRepository(ctrl)
+
 	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
-	mockHandler := NewHandler(mockStorage, &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseAddress:   "localhost:8080",
-		FilePath:      ""})
+	mockHandler := NewHandler(mockStorage, "localhost:8080", m)
 
 	defer os.Remove("short-url-db.json")
 
@@ -200,10 +208,13 @@ func Test_handler_ShortenURLJSON(t *testing.T) {
 	}
 
 	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
-	mockHandler := NewHandler(mockStorage, &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseAddress:   "localhost:8080",
-		FilePath:      ""})
+
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	m := mocks.NewMockDatabaseRepository(ctrl)
+
+	mockHandler := NewHandler(mockStorage, "localhost:8080", m)
 
 	defer os.Remove("short-url-db.json")
 

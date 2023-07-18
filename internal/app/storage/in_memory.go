@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-type Repository interface {
+type InMemoryRepository interface {
 	ShortenURL(fullLink string) (string, error)
 	GetFullURL(shortLink string) (string, error)
 	Close() error
@@ -27,7 +27,7 @@ type inMemoryStorage struct {
 	encoder *json.Encoder
 }
 
-func NewInMemoryStorage(filePath string) (Repository, error) {
+func NewInMemoryStorage(filePath string) (InMemoryRepository, error) {
 
 	var file *os.File
 	var err error

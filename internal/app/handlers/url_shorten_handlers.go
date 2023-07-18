@@ -3,7 +3,6 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/go-chi/chi/v5"
@@ -23,18 +22,30 @@ type HandlerInterface interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
 	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
+	Ping(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {
-	inMemoryRepo storage.Repository
-	conf         *config.Config
+	inMemoryRepo   storage.InMemoryRepository
+	inDatabaseRepo storage.DatabaseRepository
+	baseAddress    string
 }
 
-func NewHandler(inMemoryRepo storage.Repository, conf *config.Config) HandlerInterface {
+func NewHandler(inMemoryRepo storage.InMemoryRepository, baseAddress string, inDatabase storage.DatabaseRepository) HandlerInterface {
 	return &handler{
-		inMemoryRepo: inMemoryRepo,
-		conf:         conf,
+		inMemoryRepo:   inMemoryRepo,
+		inDatabaseRepo: inDatabase,
+		baseAddress:    baseAddress,
 	}
+}
+
+func (h *handler) Ping(w http.ResponseWriter, r *http.Request) {
+
+	err := h.inDatabaseRepo.Ping()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+	}
+	w.WriteHeader(http.StatusOK)
 }
 
 func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
@@ -69,14 +80,14 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.conf.BaseAddress = utils.AddPrefix(h.conf.BaseAddress)
+	h.baseAddress = utils.AddPrefix(h.baseAddress)
 
 	shortURL, err := h.inMemoryRepo.ShortenURL(string(request.URL))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	reply.Result = h.conf.BaseAddress + "/" + shortURL
+	reply.Result = h.baseAddress + "/" + shortURL
 
 	resp, err := json.Marshal(reply)
 	if err != nil {
@@ -101,14 +112,14 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.conf.BaseAddress = utils.AddPrefix(h.conf.BaseAddress)
+	h.baseAddress = utils.AddPrefix(h.baseAddress)
 
 	shortURL, err := h.inMemoryRepo.ShortenURL(string(fullURL))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
 
-	response := h.conf.BaseAddress + "/" + shortURL
+	response := h.baseAddress + "/" + shortURL
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)

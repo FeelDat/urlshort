@@ -7,9 +7,10 @@ import (
 )
 
 type Config struct {
-	ServerAddress string `env:"SERVER_ADDRESS"`
-	BaseAddress   string `env:"BASE_URL"`
-	FilePath      string `env:"FILE_STORAGE_PATH"`
+	ServerAddress   string `env:"SERVER_ADDRESS"`
+	BaseAddress     string `env:"BASE_URL"`
+	FilePath        string `env:"FILE_STORAGE_PATH"`
+	DatabaseAddress string `env:"DATABASE_DSN"`
 }
 
 func NewConfig() (*Config, error) {
@@ -18,6 +19,7 @@ func NewConfig() (*Config, error) {
 	flag.StringVar(&c.ServerAddress, "a", ":8080", "server address")
 	flag.StringVar(&c.BaseAddress, "b", "http://localhost:8080", "base url for short links reply")
 	flag.StringVar(&c.FilePath, "f", "/tmp/short-url-db.json", "path to store file with shorten url")
+	flag.StringVar(&c.FilePath, "d", "host=localhost user=postgres dbname=yandex sslmode=disable", "database address")
 	flag.Parse()
 
 	err := env.Parse(c)
