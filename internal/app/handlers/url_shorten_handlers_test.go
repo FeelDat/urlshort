@@ -1,9 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
-	"errors"
-	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/app/storage/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang/mock/gomock"
@@ -15,40 +12,6 @@ import (
 	"strings"
 	"testing"
 )
-
-type mockStorage struct {
-	Links   map[string]string
-	file    *os.File
-	encoder *json.Encoder
-}
-
-func newMockMemoryStorage() (storage.InMemoryRepository, error) {
-	return &mockStorage{
-		Links: make(map[string]string),
-	}, nil
-}
-
-func (m *mockStorage) ShortenURL(fullURL string) (string, error) {
-
-	shortURL := "UySmre7XjFr"
-	m.Links[shortURL] = fullURL
-	return shortURL, nil
-}
-
-func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
-	val, ok := m.Links[shortLink]
-	if !ok {
-		return "", errors.New("link does not exist")
-	}
-	return val, nil
-}
-
-func (m *mockStorage) Close() error {
-	if m.file != nil {
-		return m.file.Close()
-	}
-	return nil
-}
 
 func TestGetFullURL(t *testing.T) {
 	testCases := []struct {
@@ -81,16 +44,12 @@ func TestGetFullURL(t *testing.T) {
 		},
 	}
 
-	mckStorage, _ := newMockMemoryStorage()
-	_, err := mckStorage.ShortenURL("https://practicum.yandex.ru/")
-	require.NoError(t, err)
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockDatabaseRepository(ctrl)
+	m := mocks.NewMockRepository(ctrl)
 
-	mockHandler := NewHandler(mckStorage, "http://localhost:8080", m)
+	mockHandler := NewHandler(m, "http://localhost:8080")
 
 	router := chi.NewRouter()
 	router.Get("/{id}", mockHandler.GetFullURL)
@@ -150,12 +109,9 @@ func TestShortenURL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockDatabaseRepository(ctrl)
+	m := mocks.NewMockRepository(ctrl)
 
-	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
-	mockHandler := NewHandler(mockStorage, "localhost:8080", m)
-
-	defer os.Remove("short-url-db.json")
+	mockHandler := NewHandler(m, "http://localhost:8080")
 
 	router := chi.NewRouter()
 	router.Post("/", mockHandler.ShortenURL)
@@ -207,14 +163,12 @@ func Test_handler_ShortenURLJSON(t *testing.T) {
 		},
 	}
 
-	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
-
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 
-	m := mocks.NewMockDatabaseRepository(ctrl)
+	m := mocks.NewMockRepository(ctrl)
 
-	mockHandler := NewHandler(mockStorage, "localhost:8080", m)
+	mockHandler := NewHandler(m, "localhost:8080")
 
 	defer os.Remove("short-url-db.json")
 

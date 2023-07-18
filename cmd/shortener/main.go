@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/handlers"
@@ -30,32 +31,34 @@ func main() {
 
 	r := chi.NewRouter()
 
-	mapStorage, err := storage.NewInMemoryStorage(conf.FilePath)
+	var db *sql.DB
+
+	if conf.DatabaseAddress != "" {
+		db, err = sql.Open("pgx", conf.DatabaseAddress)
+		if err != nil {
+			logger.Fatal(err)
+		}
+		defer db.Close()
+	}
+
+	repo, err := storage.NewStorage(context.Background(), conf.FilePath, db)
 	if err != nil {
 		logger.Fatal(err)
 	}
-
 	defer func() {
-		if err := mapStorage.Close(); err != nil {
+		if err = repo.Close(); err != nil {
 			logger.Error("Failed to close the file", err)
 		}
 	}()
 
-	db, err := sql.Open("pgx", conf.DatabaseAddress)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	defer db.Close()
-
-	dbStorage := storage.NewDatabaseStorage(db)
-
-	h := handlers.NewHandler(mapStorage, conf.BaseAddress, dbStorage)
+	h := handlers.NewHandler(repo, conf.BaseAddress)
 
 	r.Use(middleware.Compress(5,
 		"application/json"+
 			"text/html"))
 	r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Use(compressMiddleware.CompressMiddleware)
+
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
 		r.Post("/api/shorten", h.ShortenURLJSON)

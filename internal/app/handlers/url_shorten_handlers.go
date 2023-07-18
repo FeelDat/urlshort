@@ -26,22 +26,20 @@ type HandlerInterface interface {
 }
 
 type handler struct {
-	inMemoryRepo   storage.InMemoryRepository
-	inDatabaseRepo storage.DatabaseRepository
-	baseAddress    string
+	storageRepository storage.Repository
+	baseAddress       string
 }
 
-func NewHandler(inMemoryRepo storage.InMemoryRepository, baseAddress string, inDatabase storage.DatabaseRepository) HandlerInterface {
+func NewHandler(repo storage.Repository, baseAddress string) HandlerInterface {
 	return &handler{
-		inMemoryRepo:   inMemoryRepo,
-		inDatabaseRepo: inDatabase,
-		baseAddress:    baseAddress,
+		storageRepository: repo,
+		baseAddress:       baseAddress,
 	}
 }
 
 func (h *handler) Ping(w http.ResponseWriter, r *http.Request) {
 
-	err := h.inDatabaseRepo.Ping()
+	err := h.storageRepository.Ping()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -55,7 +53,7 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	v, err := h.inMemoryRepo.GetFullURL(shortURL)
+	v, err := h.storageRepository.GetFullURL(r.Context(), shortURL)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
@@ -83,7 +81,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	h.baseAddress = utils.AddPrefix(h.baseAddress)
 
-	shortURL, err := h.inMemoryRepo.ShortenURL(string(request.URL))
+	shortURL, err := h.storageRepository.ShortenURL(r.Context(), string(request.URL))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
@@ -115,7 +113,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	h.baseAddress = utils.AddPrefix(h.baseAddress)
 
-	shortURL, err := h.inMemoryRepo.ShortenURL(string(fullURL))
+	shortURL, err := h.storageRepository.ShortenURL(r.Context(), string(fullURL))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 	}
