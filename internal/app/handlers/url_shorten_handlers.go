@@ -44,6 +44,7 @@ func (h *handler) Ping(w http.ResponseWriter, r *http.Request) {
 	err := h.inDatabaseRepo.Ping()
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
