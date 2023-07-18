@@ -1,9 +1,7 @@
 package storage
 
 import (
-	"context"
 	"database/sql"
-	"time"
 )
 
 type DatabaseStorage struct {
@@ -21,9 +19,8 @@ func NewDatabaseStorage(db *sql.DB) *DatabaseStorage {
 }
 
 func (d *DatabaseStorage) Ping() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err := d.db.PingContext(ctx); err != nil {
+	err := d.db.Ping()
+	if err != nil {
 		return err
 	}
 	return nil
