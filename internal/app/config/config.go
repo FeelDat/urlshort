@@ -18,7 +18,7 @@ func NewConfig() (*Config, error) {
 
 	flag.StringVar(&c.ServerAddress, "a", ":8080", "server address")
 	flag.StringVar(&c.BaseAddress, "b", "http://localhost:8080", "base url for short links reply")
-	flag.StringVar(&c.FilePath, "f", "", "path to store file with shorten url")
+	flag.StringVar(&c.FilePath, "f", "/tmp/short-url-db.json", "path to store file with shorten url")
 	flag.StringVar(&c.DatabaseAddress, "d", "", "database address")
 	flag.Parse()
 
