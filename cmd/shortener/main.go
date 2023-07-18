@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/handlers"
@@ -12,7 +11,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"net/http"
-	"time"
 )
 
 func main() {
@@ -48,12 +46,6 @@ func main() {
 		logger.Fatal(err)
 	}
 	defer db.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-	if err = db.PingContext(ctx); err != nil {
-		panic(err)
-	}
 
 	dbStorage := storage.NewDatabaseStorage(db)
 
