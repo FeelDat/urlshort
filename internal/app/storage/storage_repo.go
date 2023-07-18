@@ -97,6 +97,7 @@ func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, erro
 		if err != nil {
 			return "", err
 		}
+		s.Links[urlID] = fullLink
 	} else {
 		s.Links[urlID] = fullLink
 	}
