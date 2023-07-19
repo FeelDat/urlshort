@@ -85,10 +85,10 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatch
 	defer tx.Rollback()
 
 	responses := make([]models.URLRBatchResponse, len(batch))
+
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-		uid := uuid.NewString()
-		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, uid, urlID, req.OriginalURL)
+		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, req.CorrelationID, urlID, req.OriginalURL)
 		if err != nil {
 			return nil, err
 		}

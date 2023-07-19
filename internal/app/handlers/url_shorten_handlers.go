@@ -68,7 +68,24 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	shortURL, err := h.repository.ShortenURL(r.Context(), string(request.URL))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
+			w.WriteHeader(http.StatusConflict)
+			reply.Result = h.baseAddress + "/" + shortURL
+			resp, err := json.Marshal(reply)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			_, err = w.Write([]byte(resp))
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			return
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	reply.Result = h.baseAddress + "/" + shortURL
