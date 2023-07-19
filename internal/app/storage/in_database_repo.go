@@ -4,22 +4,17 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/FeelDat/urlshort/internal/app/handlers"
+	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/google/uuid"
 	"math/rand"
 	"time"
 )
 
-type JSONResponse struct {
-	CorrelationID string
-	ShortURL      string
-}
-
 type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
-	ShortenURLBatch(ctx context.Context, batch []handlers.URLBatchRequest, baseAddr string) ([]handlers.URLRBatchResponse, error)
+	ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error)
 }
 
 type dbStorage struct {
@@ -70,7 +65,7 @@ func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, e
 	return originalURL, nil
 }
 
-func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []handlers.URLBatchRequest, baseAddr string) ([]handlers.URLRBatchResponse, error) {
+func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
 
 	if len(batch) == 0 {
 		return nil, errors.New("empty batch")
@@ -82,7 +77,7 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []handlers.URLBat
 	}
 	defer tx.Rollback()
 
-	responses := make([]handlers.URLRBatchResponse, len(batch))
+	responses := make([]models.URLRBatchResponse, len(batch))
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
 
@@ -91,7 +86,7 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []handlers.URLBat
 			return nil, err
 		}
 
-		responses[i] = handlers.URLRBatchResponse{
+		responses[i] = models.URLRBatchResponse{
 			CorrelationID: req.CorrelationID,
 			ShortURL:      baseAddr + "/" + urlID,
 		}

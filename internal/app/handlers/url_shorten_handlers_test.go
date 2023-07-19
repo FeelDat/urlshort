@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,10 @@ type mockStorage struct {
 	Links   map[string]string
 	file    *os.File
 	encoder *json.Encoder
+}
+
+func (m *mockStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
+	return nil, nil
 }
 
 func newMockRepository() (storage.Repository, error) {

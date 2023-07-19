@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"github.com/FeelDat/urlshort/internal/app/handlers"
+	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/google/uuid"
 	"math/rand"
@@ -76,13 +76,13 @@ func (s *storage) GetFullURL(ctx context.Context, shortLink string) (string, err
 
 }
 
-func (s *storage) ShortenURLBatch(ctx context.Context, batch []handlers.URLBatchRequest, baseAddr string) ([]handlers.URLRBatchResponse, error) {
+func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
 
 	if len(batch) == 0 {
 		return nil, errors.New("empty batch")
 	}
 
-	responses := make([]handlers.URLRBatchResponse, len(batch))
+	responses := make([]models.URLRBatchResponse, len(batch))
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
 
@@ -104,7 +104,7 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []handlers.URLBatch
 
 		s.Links[urlID] = req.OriginalURL
 
-		responses[i] = handlers.URLRBatchResponse{
+		responses[i] = models.URLRBatchResponse{
 			CorrelationID: req.CorrelationID,
 			ShortURL:      baseAddr + "/" + urlID,
 		}

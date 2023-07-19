@@ -3,30 +3,13 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"io"
 	"net/http"
 )
-
-type jsonRequest struct {
-	URL string `json:"url"`
-}
-
-type jsonReply struct {
-	Result string `json:"result"`
-}
-
-type URLBatchRequest struct {
-	CorrelationID string `json:"correlation_id"`
-	OriginalURL   string `json:"original_url"`
-}
-
-type URLRBatchResponse struct {
-	CorrelationID string `json:"correlation_id"`
-	ShortURL      string `json:"short_url"`
-}
 
 type HandlerInterface interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
@@ -65,8 +48,8 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
-	var request jsonRequest
-	var reply jsonReply
+	var request models.JsonRequest
+	var reply models.JsonResponse
 
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
@@ -131,7 +114,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 
-	urls := make([]URLBatchRequest, 0)
+	urls := make([]models.URLBatchRequest, 0)
 	err := json.NewDecoder(r.Body).Decode(&urls)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
