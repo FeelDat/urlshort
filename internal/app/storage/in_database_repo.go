@@ -59,6 +59,7 @@ func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, er
 func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 
 	var originalURL string
+
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 	err := s.db.QueryRowContext(ctrl, `SELECT original_url FROM urls WHERE short_url = $1`, shortLink).Scan(&originalURL)

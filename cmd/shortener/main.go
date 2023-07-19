@@ -27,8 +27,6 @@ func main() {
 	}
 
 	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
-	compressMiddleware := custommiddleware.NewCompressMiddleware()
-
 	r := chi.NewRouter()
 
 	var h handlers.HandlerInterface
@@ -61,7 +59,6 @@ func main() {
 		"application/json"+
 			"text/html"))
 	r.Use(loggerMiddleware.LoggerMiddleware)
-	r.Use(compressMiddleware.CompressMiddleware)
 
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
