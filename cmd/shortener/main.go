@@ -31,6 +31,7 @@ func main() {
 
 	r := chi.NewRouter()
 
+	var h handlers.HandlerInterface
 	var db *sql.DB
 
 	if conf.DatabaseAddress != "" {
@@ -39,19 +40,22 @@ func main() {
 			logger.Fatal(err)
 		}
 		defer db.Close()
-	}
 
-	repo, err := storage.NewStorage(context.Background(), conf.FilePath, db)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	defer func() {
-		if err = repo.Close(); err != nil {
-			logger.Error("Failed to close the file", err)
+		dbRepo, err := storage.NewDbStorage(context.Background(), db)
+		if err != nil {
+			logger.Fatal(err)
 		}
-	}()
 
-	h := handlers.NewHandler(repo, conf.BaseAddress)
+		h = handlers.NewHandler(dbRepo, conf.BaseAddress)
+
+	} else {
+		inMemRepo, err := storage.NewInMemStorage(conf.FilePath)
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		h = handlers.NewHandler(inMemRepo, conf.BaseAddress)
+	}
 
 	r.Use(middleware.Compress(5,
 		"application/json"+
@@ -63,7 +67,13 @@ func main() {
 		r.Post("/", h.ShortenURL)
 		r.Post("/api/shorten", h.ShortenURLJSON)
 		r.Get("/{id}", h.GetFullURL)
-		r.Get("/ping", h.Ping)
+		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+			if err = db.Ping(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		})
 	})
 
 	err = http.ListenAndServe(conf.ServerAddress, r)

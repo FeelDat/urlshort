@@ -145,7 +145,7 @@ func TestShortenURL(t *testing.T) {
 		},
 	}
 
-	mockStorage, _ := storage.NewStorage(context.TODO(), "short-url-db.json", nil)
+	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
 	mockHandler := NewHandler(mockStorage, "localhost:8080")
 
 	defer os.Remove("short-url-db.json")
@@ -200,7 +200,7 @@ func Test_handler_ShortenURLJSON(t *testing.T) {
 		},
 	}
 
-	mockStorage, _ := storage.NewStorage(context.TODO(), "short-url-db.json", nil)
+	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
 
 	mockHandler := NewHandler(mockStorage, "localhost:8080")
 
