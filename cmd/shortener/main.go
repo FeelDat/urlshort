@@ -41,7 +41,7 @@ func main() {
 		}
 		defer db.Close()
 
-		dbRepo, err := storage.NewDbStorage(context.Background(), db)
+		dbRepo, err := storage.NewDBStorage(context.Background(), db)
 		if err != nil {
 			logger.Fatal(err)
 		}
