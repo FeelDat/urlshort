@@ -7,6 +7,8 @@ import (
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"math/rand"
 	"time"
 )
@@ -43,6 +45,11 @@ func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, er
 	defer cancel()
 	_, err := s.db.ExecContext(ctrl, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, uid, urlID, fullLink)
 	if err != nil {
+		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
+			var shortURL string
+			s.db.QueryRowContext(ctrl, `SELECT short_url FROM urls WHERE original_url = $1`, fullLink).Scan(&shortURL)
+			return shortURL, err
+		}
 		return "", err
 	}
 

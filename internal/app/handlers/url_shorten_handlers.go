@@ -7,6 +7,8 @@ import (
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"net/http"
 )
@@ -98,7 +100,19 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	shortURL, err := h.repository.ShortenURL(r.Context(), string(fullURL))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
+			w.WriteHeader(http.StatusConflict)
+			response := h.baseAddress + "/" + shortURL
+			_, err := w.Write([]byte(response))
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			return
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
 	response := h.baseAddress + "/" + shortURL
