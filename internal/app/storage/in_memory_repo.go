@@ -106,7 +106,7 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 
 		responses[i] = models.URLRBatchResponse{
 			CorrelationID: req.CorrelationID,
-			ShortURL:      baseAddr + "/" + urlID,
+			ShortURL:      urlID,
 		}
 	}
 
