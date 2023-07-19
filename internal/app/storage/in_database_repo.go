@@ -4,15 +4,22 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"github.com/FeelDat/urlshort/internal/app/handlers"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/google/uuid"
 	"math/rand"
 	"time"
 )
 
+type JSONResponse struct {
+	CorrelationID string
+	ShortURL      string
+}
+
 type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
+	ShortenURLBatch(ctx context.Context, batch []handlers.URLBatchRequest, baseAddr string) ([]handlers.URLRBatchResponse, error)
 }
 
 type dbStorage struct {
@@ -61,4 +68,39 @@ func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, e
 	}
 
 	return originalURL, nil
+}
+
+func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []handlers.URLBatchRequest, baseAddr string) ([]handlers.URLRBatchResponse, error) {
+
+	if len(batch) == 0 {
+		return nil, errors.New("empty batch")
+	}
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	responses := make([]handlers.URLRBatchResponse, len(batch))
+	for i, req := range batch {
+		urlID := utils.Base62Encode(rand.Uint64())
+
+		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, req.CorrelationID, urlID, req.OriginalURL)
+		if err != nil {
+			return nil, err
+		}
+
+		responses[i] = handlers.URLRBatchResponse{
+			CorrelationID: req.CorrelationID,
+			ShortURL:      baseAddr + "/" + urlID,
+		}
+	}
+
+	if err = tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return responses, nil
+
 }

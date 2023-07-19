@@ -18,10 +18,21 @@ type jsonReply struct {
 	Result string `json:"result"`
 }
 
+type URLBatchRequest struct {
+	CorrelationID string `json:"correlation_id"`
+	OriginalURL   string `json:"original_url"`
+}
+
+type URLRBatchResponse struct {
+	CorrelationID string `json:"correlation_id"`
+	ShortURL      string `json:"short_url"`
+}
+
 type HandlerInterface interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
 	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
+	ShortenURLBatch(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {
@@ -116,4 +127,42 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+}
+
+func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
+
+	urls := make([]URLBatchRequest, 0)
+	err := json.NewDecoder(r.Body).Decode(&urls)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(urls) == 0 {
+		http.Error(w, "empty batch", http.StatusBadRequest)
+		return
+	}
+
+	h.baseAddress = utils.AddPrefix(h.baseAddress)
+
+	result, err := h.repository.ShortenURLBatch(r.Context(), urls, h.baseAddress)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp, err := json.Marshal(result)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(resp)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 }

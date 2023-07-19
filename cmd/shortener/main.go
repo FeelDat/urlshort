@@ -65,7 +65,10 @@ func main() {
 
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
-		r.Post("/api/shorten", h.ShortenURLJSON)
+		r.Route("/api/shorten", func(r chi.Router) {
+			r.Post("/", h.ShortenURLJSON)
+			r.Post("/batch", h.ShortenURLBatch)
+		})
 		r.Get("/{id}", h.GetFullURL)
 		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 			if err = db.Ping(); err != nil {
