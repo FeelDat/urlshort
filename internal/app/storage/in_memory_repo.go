@@ -85,9 +85,9 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 	responses := make([]models.URLRBatchResponse, len(batch))
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-
+		uid := uuid.NewString()
 		urlInfo := URLInfo{
-			UUID:        req.CorrelationID,
+			UUID:        uid,
 			ShortURL:    urlID,
 			OriginalURL: req.OriginalURL,
 		}
@@ -106,7 +106,7 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 
 		responses[i] = models.URLRBatchResponse{
 			CorrelationID: req.CorrelationID,
-			ShortURL:      urlID,
+			ShortURL:      baseAddr + "/" + urlID,
 		}
 	}
 
