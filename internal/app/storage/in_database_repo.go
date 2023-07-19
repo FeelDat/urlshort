@@ -19,7 +19,7 @@ type dbStorage struct {
 	db *sql.DB
 }
 
-func NewDbStorage(ctx context.Context, db *sql.DB) (Repository, error) {
+func NewDBStorage(ctx context.Context, db *sql.DB) (Repository, error) {
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
