@@ -48,8 +48,8 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
-	var request models.JsonRequest
-	var reply models.JsonResponse
+	var request models.JSONRequest
+	var reply models.JSONResponse
 
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {

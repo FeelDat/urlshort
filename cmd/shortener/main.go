@@ -71,6 +71,10 @@ func main() {
 		})
 		r.Get("/{id}", h.GetFullURL)
 		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+			if conf.DatabaseAddress == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
 			if err = db.Ping(); err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

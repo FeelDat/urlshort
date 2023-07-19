@@ -1,6 +1,6 @@
 package models
 
-type JsonRequest struct {
+type JSONRequest struct {
 	URL string `json:"url"`
 }
 
