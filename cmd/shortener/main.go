@@ -11,7 +11,9 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"math/rand"
 	"net/http"
+	"time"
 )
 
 func main() {
@@ -25,6 +27,8 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
+
+	rand.Seed(time.Now().UnixNano())
 
 	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
 	compressMiddleware := custommiddleware.NewCompressMiddleware()
