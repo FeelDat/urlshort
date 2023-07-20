@@ -39,10 +39,10 @@ func NewDBStorage(ctx context.Context, db *sql.DB) (Repository, error) {
 		return nil, err
 	}
 
-	_, err = db.ExecContext(ctrl, "CREATE UNIQUE INDEX original_url_unique ON urls(original_url)")
-	if err != nil {
-		return nil, err
-	}
+	//_, err = db.ExecContext(ctrl, "CREATE UNIQUE INDEX original_url_unique ON urls(original_url)")
+	//if err != nil {
+	//	return nil, err
+	//}
 
 	if err = tx.Commit(); err != nil {
 		return nil, err
