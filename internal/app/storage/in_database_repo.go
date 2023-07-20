@@ -25,7 +25,7 @@ type dbStorage struct {
 
 func NewDBStorage(ctx context.Context, db *sql.DB) (Repository, error) {
 
-	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
+	ctrl, cancel := context.WithTimeout(ctx, time.Second*5)
 	defer cancel()
 
 	tx, err := db.BeginTx(ctx, nil)
