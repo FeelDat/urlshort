@@ -70,6 +70,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 	shortURL, err := h.repository.ShortenURL(r.Context(), string(request.URL))
 	if err != nil {
 		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
+			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
 			reply.Result = h.baseAddress + "/" + shortURL
 			resp, err := json.Marshal(reply)
