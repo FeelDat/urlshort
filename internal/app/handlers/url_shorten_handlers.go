@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"net/http"
-	"net/url"
 )
 
 type HandlerInterface interface {
@@ -44,15 +43,8 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	u, err := url.Parse(v)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
-	if u.Scheme == "" {
-		u.Scheme = "http"
-	}
-	w.Header().Set("Location", u.String())
+
+	w.Header().Set("Location", v)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 

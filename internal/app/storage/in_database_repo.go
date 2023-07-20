@@ -27,8 +27,24 @@ func NewDBStorage(ctx context.Context, db *sql.DB) (Repository, error) {
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
-	_, err := db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, uuid varchar(36), short_url varchar(20), original_url text)")
+
+	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+
+	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, uuid varchar(36), short_url varchar(20), original_url text)")
+	if err != nil {
+		return nil, err
+	}
+
+	_, err = db.ExecContext(ctrl, "CREATE UNIQUE INDEX original_url_unique ON urls(original_url)")
+	if err != nil {
+		return nil, err
+	}
+
+	if err = tx.Commit(); err != nil {
 		return nil, err
 	}
 
