@@ -3,37 +3,32 @@ package handlers
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/FeelDat/urlshort/internal/app/config"
+	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgerrcode"
+	"github.com/jackc/pgx/v5/pgconn"
 	"io"
 	"net/http"
 )
-
-type jsonRequest struct {
-	URL string `json:"url"`
-}
-
-type jsonReply struct {
-	Result string `json:"result"`
-}
 
 type HandlerInterface interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
 	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
+	ShortenURLBatch(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {
-	inMemoryRepo storage.Repository
-	conf         *config.Config
+	repository  storage.Repository
+	baseAddress string
 }
 
-func NewHandler(inMemoryRepo storage.Repository, conf *config.Config) HandlerInterface {
+func NewHandler(repo storage.Repository, baseAddress string) HandlerInterface {
 	return &handler{
-		inMemoryRepo: inMemoryRepo,
-		conf:         conf,
+		repository:  repo,
+		baseAddress: baseAddress,
 	}
 }
 
@@ -43,11 +38,12 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
-	v, err := h.inMemoryRepo.GetFullURL(shortURL)
+	v, err := h.repository.GetFullURL(r.Context(), shortURL)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+
 	w.Header().Set("Location", v)
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
@@ -55,8 +51,8 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
-	var request jsonRequest
-	var reply jsonReply
+	var request models.JSONRequest
+	var reply models.JSONResponse
 
 	_, err := buf.ReadFrom(r.Body)
 	if err != nil {
@@ -69,14 +65,32 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.conf.BaseAddress = utils.AddPrefix(h.conf.BaseAddress)
+	h.baseAddress = utils.AddPrefix(h.baseAddress)
 
-	shortURL, err := h.inMemoryRepo.ShortenURL(string(request.URL))
+	shortURL, err := h.repository.ShortenURL(r.Context(), string(request.URL))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			reply.Result = h.baseAddress + "/" + shortURL
+			resp, err := json.Marshal(reply)
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			_, err = w.Write([]byte(resp))
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			return
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
-	reply.Result = h.conf.BaseAddress + "/" + shortURL
+	reply.Result = h.baseAddress + "/" + shortURL
 
 	resp, err := json.Marshal(reply)
 	if err != nil {
@@ -101,14 +115,26 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.conf.BaseAddress = utils.AddPrefix(h.conf.BaseAddress)
+	h.baseAddress = utils.AddPrefix(h.baseAddress)
 
-	shortURL, err := h.inMemoryRepo.ShortenURL(string(fullURL))
+	shortURL, err := h.repository.ShortenURL(r.Context(), string(fullURL))
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		if err, ok := err.(*pgconn.PgError); ok && err.Code == pgerrcode.UniqueViolation {
+			w.WriteHeader(http.StatusConflict)
+			response := h.baseAddress + "/" + shortURL
+			_, err := w.Write([]byte(response))
+			if err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			return
+		} else {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
 	}
 
-	response := h.conf.BaseAddress + "/" + shortURL
+	response := h.baseAddress + "/" + shortURL
 
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
@@ -117,4 +143,42 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
+}
+
+func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
+
+	urls := make([]models.URLBatchRequest, 0)
+	err := json.NewDecoder(r.Body).Decode(&urls)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(urls) == 0 {
+		http.Error(w, "empty batch", http.StatusBadRequest)
+		return
+	}
+
+	h.baseAddress = utils.AddPrefix(h.baseAddress)
+
+	result, err := h.repository.ShortenURLBatch(r.Context(), urls, h.baseAddress)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	resp, err := json.Marshal(result)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+	_, err = w.Write(resp)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 }

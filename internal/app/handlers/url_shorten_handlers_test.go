@@ -1,9 +1,10 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"github.com/FeelDat/urlshort/internal/app/config"
+	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/assert"
@@ -21,25 +22,33 @@ type mockStorage struct {
 	encoder *json.Encoder
 }
 
-func newMockMemoryStorage() (storage.Repository, error) {
+func (m *mockStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
+	return nil, nil
+}
+
+func newMockRepository() (storage.Repository, error) {
 	return &mockStorage{
 		Links: make(map[string]string),
 	}, nil
 }
 
-func (m *mockStorage) ShortenURL(fullURL string) (string, error) {
+func (m *mockStorage) ShortenURL(ctx context.Context, fullURL string) (string, error) {
 
 	shortURL := "UySmre7XjFr"
 	m.Links[shortURL] = fullURL
 	return shortURL, nil
 }
 
-func (m *mockStorage) GetFullURL(shortLink string) (string, error) {
+func (m *mockStorage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 	val, ok := m.Links[shortLink]
 	if !ok {
 		return "", errors.New("link does not exist")
 	}
 	return val, nil
+}
+
+func (m *mockStorage) Ping() error {
+	return nil
 }
 
 func (m *mockStorage) Close() error {
@@ -80,11 +89,11 @@ func TestGetFullURL(t *testing.T) {
 		},
 	}
 
-	mckStorage, _ := newMockMemoryStorage()
-	_, err := mckStorage.ShortenURL("https://practicum.yandex.ru/")
+	mckStorage, _ := newMockRepository()
+	_, err := mckStorage.ShortenURL(context.TODO(), "https://practicum.yandex.ru/")
 	require.NoError(t, err)
 
-	mockHandler := NewHandler(mckStorage, &config.Config{})
+	mockHandler := NewHandler(mckStorage, "http://localhost:8080")
 
 	router := chi.NewRouter()
 	router.Get("/{id}", mockHandler.GetFullURL)
@@ -141,11 +150,10 @@ func TestShortenURL(t *testing.T) {
 		},
 	}
 
-	mockStorage, _ := storage.NewInMemoryStorage("short-url-db.json")
-	mockHandler := NewHandler(mockStorage, &config.Config{
-		ServerAddress: "localhost:8080",
-		BaseAddress:   "localhost:8080",
-		FilePath:      ""})
+	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
+	mockHandler := NewHandler(mockStorage, "localhost:8080")
+
+	defer os.Remove("short-url-db.json")
 
 	router := chi.NewRouter()
 	router.Post("/", mockHandler.ShortenURL)
@@ -156,6 +164,61 @@ func TestShortenURL(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 
+			r, err := http.NewRequest(tt.method, ts.URL+"/", strings.NewReader(tt.longLink))
+			require.NoError(t, err)
+			resp, err := ts.Client().Do(r)
+			require.NoError(t, err)
+
+			defer resp.Body.Close()
+
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
+			assert.Equal(t, tt.expectedContentType, resp.Header.Get("Content-Type"))
+
+		})
+	}
+}
+
+func Test_handler_ShortenURLJSON(t *testing.T) {
+
+	testCases := []struct {
+		name                string
+		longLink            string
+		method              string
+		expectedStatusCode  int
+		expectedContentType string
+	}{
+		{
+			name:                "successful test",
+			longLink:            "https://practicum.yandex.ru/",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusCreated,
+			expectedContentType: "text/plain",
+		},
+		{
+			name:                "no link",
+			longLink:            "",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "",
+		},
+	}
+
+	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
+
+	mockHandler := NewHandler(mockStorage, "localhost:8080")
+
+	defer os.Remove("short-url-db.json")
+
+	router := chi.NewRouter()
+	router.Post("/", mockHandler.ShortenURL)
+
+	ts := httptest.NewServer(router)
+	defer ts.Close()
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
 			r, err := http.NewRequest(tt.method, ts.URL+"/", strings.NewReader(tt.longLink))
 			require.NoError(t, err)
 			resp, err := ts.Client().Do(r)

@@ -1,19 +1,24 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/handlers"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/custommiddleware"
-	logger2 "github.com/FeelDat/urlshort/internal/logger"
+	log "github.com/FeelDat/urlshort/internal/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	_ "github.com/jackc/pgx/v5/stdlib"
+	"math/rand"
 	"net/http"
+	"time"
 )
 
 func main() {
 
-	logger, err := logger2.InitLogger("Info")
+	logger, err := log.InitLogger("Info")
 	if err != nil {
 		panic(err)
 	}
@@ -23,23 +28,38 @@ func main() {
 		logger.Fatal(err)
 	}
 
+	rand.Seed(time.Now().UnixNano())
+
 	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
 	compressMiddleware := custommiddleware.NewCompressMiddleware()
 
 	r := chi.NewRouter()
 
-	mapStorage, err := storage.NewInMemoryStorage(conf.FilePath)
-	defer func() {
-		if err := mapStorage.Close(); err != nil {
-			logger.Error("Failed to close the file", err)
+	var h handlers.HandlerInterface
+	var db *sql.DB
+
+	if conf.DatabaseAddress != "" {
+		db, err = sql.Open("pgx", conf.DatabaseAddress)
+		if err != nil {
+			logger.Fatal(err)
 		}
-	}()
+		defer db.Close()
 
-	if err != nil {
-		logger.Fatal(err)
+		dbRepo, err := storage.NewDBStorage(context.Background(), db)
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		h = handlers.NewHandler(dbRepo, conf.BaseAddress)
+
+	} else {
+		inMemRepo, err := storage.NewInMemStorage(conf.FilePath)
+		if err != nil {
+			logger.Fatal(err)
+		}
+
+		h = handlers.NewHandler(inMemRepo, conf.BaseAddress)
 	}
-
-	h := handlers.NewHandler(mapStorage, conf)
 
 	r.Use(middleware.Compress(5,
 		"application/json"+
@@ -48,8 +68,22 @@ func main() {
 	r.Use(compressMiddleware.CompressMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
-		r.Post("/api/shorten", h.ShortenURLJSON)
+		r.Route("/api/shorten", func(r chi.Router) {
+			r.Post("/", h.ShortenURLJSON)
+			r.Post("/batch", h.ShortenURLBatch)
+		})
 		r.Get("/{id}", h.GetFullURL)
+		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+			if conf.DatabaseAddress == "" {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+			if err = db.Ping(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		})
 	})
 
 	err = http.ListenAndServe(conf.ServerAddress, r)
