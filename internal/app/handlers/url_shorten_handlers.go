@@ -39,7 +39,7 @@ func NewHandler(repo storage.Repository, baseAddress string, logger *zap.Sugared
 }
 
 func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("user")
+	cookie, err := r.Cookie("jwt")
 	if err != nil {
 		if err == http.ErrNoCookie {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -109,7 +109,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
 		return
 	}
-	cookie, err := r.Cookie("user")
+	cookie, err := r.Cookie("jwt")
 	if err != nil {
 		if err == http.ErrNoCookie {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -183,7 +183,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
 		return
 	}
-	cookie, err := r.Cookie("user")
+	cookie, err := r.Cookie("jwt")
 	if err != nil {
 		if err == http.ErrNoCookie {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
@@ -251,7 +251,7 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
 		return
 	}
-	cookie, err := r.Cookie("user")
+	cookie, err := r.Cookie("jwt")
 	if err != nil {
 		if err == http.ErrNoCookie {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
