@@ -30,7 +30,7 @@ func (m *AuthMiddleware) AuthMiddleware(next http.Handler) http.Handler {
 				return
 			}
 			http.SetCookie(w, &http.Cookie{
-				Name:     "user",
+				Name:     "jwt",
 				Value:    token,
 				Expires:  time.Now().Add(24 * time.Hour),
 				HttpOnly: true,
