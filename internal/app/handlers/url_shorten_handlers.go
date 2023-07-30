@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"os"
 )
 
 type HandlerInterface interface {
@@ -191,7 +192,9 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	userID := cookie.Value
+	jwtToken := cookie.Value
+	jwtKey := os.Getenv("JWT_KEY")
+	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 
 	cntx := context.WithValue(r.Context(), "userID", userID)
 
