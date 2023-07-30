@@ -69,7 +69,6 @@ func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, erro
 	}
 	s.Links[urlID] = fullLink
 
-	// Add the URL to UserURLs
 	s.UserURLs[uid.(string)] = append(s.UserURLs[uid.(string)], models.UsersURLS{OriginalURL: fullLink, ShortURL: urlID})
 
 	return urlID, nil
