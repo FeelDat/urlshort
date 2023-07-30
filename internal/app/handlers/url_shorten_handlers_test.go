@@ -22,6 +22,10 @@ type mockStorage struct {
 	encoder *json.Encoder
 }
 
+func (m *mockStorage) GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error) {
+	return nil, nil
+}
+
 func (m *mockStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
 	return nil, nil
 }
@@ -45,17 +49,6 @@ func (m *mockStorage) GetFullURL(ctx context.Context, shortLink string) (string,
 		return "", errors.New("link does not exist")
 	}
 	return val, nil
-}
-
-func (m *mockStorage) Ping() error {
-	return nil
-}
-
-func (m *mockStorage) Close() error {
-	if m.file != nil {
-		return m.file.Close()
-	}
-	return nil
 }
 
 func TestGetFullURL(t *testing.T) {
@@ -93,7 +86,7 @@ func TestGetFullURL(t *testing.T) {
 	_, err := mckStorage.ShortenURL(context.TODO(), "https://practicum.yandex.ru/")
 	require.NoError(t, err)
 
-	mockHandler := NewHandler(mckStorage, "http://localhost:8080")
+	mockHandler := NewHandler(mckStorage, "http://localhost:8080", nil)
 
 	router := chi.NewRouter()
 	router.Get("/{id}", mockHandler.GetFullURL)
@@ -151,7 +144,7 @@ func TestShortenURL(t *testing.T) {
 	}
 
 	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
-	mockHandler := NewHandler(mockStorage, "localhost:8080")
+	mockHandler := NewHandler(mockStorage, "localhost:8080", nil)
 
 	defer os.Remove("short-url-db.json")
 
@@ -207,7 +200,7 @@ func Test_handler_ShortenURLJSON(t *testing.T) {
 
 	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
 
-	mockHandler := NewHandler(mockStorage, "localhost:8080")
+	mockHandler := NewHandler(mockStorage, "localhost:8080", nil)
 
 	defer os.Remove("short-url-db.json")
 
