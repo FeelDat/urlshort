@@ -6,9 +6,9 @@ import (
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -17,45 +17,71 @@ type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
 	ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error)
+	GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error)
 }
 
 type dbStorage struct {
 	db *sql.DB
 }
 
-func NewDBStorage(ctx context.Context, db *sql.DB) (Repository, error) {
+func NewDBStorage(db *sql.DB) Repository {
+	return &dbStorage{db: db}
+}
 
+func InitDB(ctx context.Context, db *sql.DB) error {
 	ctrl, cancel := context.WithTimeout(ctx, time.Millisecond*500)
 	defer cancel()
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tx.Rollback()
 
 	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, uuid varchar(36), short_url varchar(20), original_url text)")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = db.ExecContext(ctrl, "CREATE UNIQUE INDEX IF NOT EXISTS original_url_unique ON urls(original_url)")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	return tx.Commit()
+}
+
+func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error) {
+
+	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctrl, `SELECT short_url, original_url FROM urls WHERE uuid = $1`, userID)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return &dbStorage{db: db}, err
+	var urls []models.UsersURLS
 
+	for rows.Next() {
+		var u models.UsersURLS
+		if err := rows.Scan(&u.ShortURL, &u.OriginalURL); err != nil {
+			log.Fatal(err)
+		}
+		urls = append(urls, u)
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return urls, err
 }
 
 func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 
 	urlID := utils.Base62Encode(rand.Uint64())
-	uid := uuid.NewString()
+	uid := ctx.Value("userID")
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
@@ -105,7 +131,8 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatch
 
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, req.CorrelationID, urlID, req.OriginalURL)
+		uid := ctx.Value("userID")
+		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, uid, urlID, req.OriginalURL)
 		if err != nil {
 			return nil, err
 		}

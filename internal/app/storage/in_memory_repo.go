@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
-	"github.com/google/uuid"
 	"math/rand"
 	"os"
 )
@@ -41,13 +40,18 @@ func NewInMemStorage(filePath string) (Repository, error) {
 
 }
 
+func (s *storage) GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error) {
+
+	return nil, nil
+}
+
 func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 
 	urlID := utils.Base62Encode(rand.Uint64())
-	uid := uuid.NewString()
+	uid := ctx.Value("userID")
 
 	urlInfo := URLInfo{
-		UUID:        uid,
+		UUID:        uid.(string),
 		ShortURL:    urlID,
 		OriginalURL: fullLink,
 	}
@@ -85,9 +89,9 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 	responses := make([]models.URLRBatchResponse, len(batch))
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-		uid := uuid.NewString()
+		uid := ctx.Value("userID")
 		urlInfo := URLInfo{
-			UUID:        uid,
+			UUID:        uid.(string),
 			ShortURL:    urlID,
 			OriginalURL: req.OriginalURL,
 		}

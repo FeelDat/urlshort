@@ -31,7 +31,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
-	compressMiddleware := custommiddleware.NewCompressMiddleware()
+	authMiddleware := custommiddleware.NewAuthMiddleware()
 
 	r := chi.NewRouter()
 
@@ -45,12 +45,14 @@ func main() {
 		}
 		defer db.Close()
 
-		dbRepo, err := storage.NewDBStorage(context.Background(), db)
+		err = storage.InitDB(context.Background(), db)
 		if err != nil {
 			logger.Fatal(err)
 		}
 
-		h = handlers.NewHandler(dbRepo, conf.BaseAddress)
+		dbRepo := storage.NewDBStorage(db)
+
+		h = handlers.NewHandler(dbRepo, conf.BaseAddress, logger)
 
 	} else {
 		inMemRepo, err := storage.NewInMemStorage(conf.FilePath)
@@ -58,19 +60,24 @@ func main() {
 			logger.Fatal(err)
 		}
 
-		h = handlers.NewHandler(inMemRepo, conf.BaseAddress)
+		h = handlers.NewHandler(inMemRepo, conf.BaseAddress, logger)
 	}
 
 	r.Use(middleware.Compress(5,
 		"application/json"+
 			"text/html"))
 	r.Use(loggerMiddleware.LoggerMiddleware)
-	r.Use(compressMiddleware.CompressMiddleware)
+	r.Use(authMiddleware.AuthMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
-		r.Route("/api/shorten", func(r chi.Router) {
-			r.Post("/", h.ShortenURLJSON)
-			r.Post("/batch", h.ShortenURLBatch)
+		r.Route("/api", func(r chi.Router) {
+			r.Route("/shorten", func(r chi.Router) {
+				r.Post("/", h.ShortenURLJSON)
+				r.Post("/batch", h.ShortenURLBatch)
+			})
+			r.Route("/user", func(r chi.Router) {
+				r.Get("/urls", h.GetUsersURLS)
+			})
 		})
 		r.Get("/{id}", h.GetFullURL)
 		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
