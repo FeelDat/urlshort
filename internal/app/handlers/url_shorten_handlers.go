@@ -53,7 +53,7 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 
-	urls, err := h.repository.GetUsersURLS(r.Context(), userID)
+	urls, err := h.repository.GetUsersURLS(r.Context(), userID, h.baseAddress)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

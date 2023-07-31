@@ -17,7 +17,7 @@ type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
 	ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error)
-	GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error)
+	GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error)
 }
 
 type dbStorage struct {
@@ -51,7 +51,7 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 	return tx.Commit()
 }
 
-func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error) {
+func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
@@ -69,6 +69,7 @@ func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string) ([]models.U
 		if err := rows.Scan(&u.ShortURL, &u.OriginalURL); err != nil {
 			log.Fatal(err)
 		}
+		u.ShortURL = baseAddr + "/" + u.ShortURL
 		urls = append(urls, u)
 	}
 	if err := rows.Err(); err != nil {
