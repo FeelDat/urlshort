@@ -32,6 +32,7 @@ func main() {
 
 	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
 	authMiddleware := custommiddleware.NewAuthMiddleware()
+	compressMIddleware := custommiddleware.NewCompressMiddleware()
 
 	r := chi.NewRouter()
 
@@ -68,6 +69,7 @@ func main() {
 			"text/html"))
 	r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Use(authMiddleware.AuthMiddleware)
+	r.Use(compressMIddleware.CompressMiddleware)
 	r.Route("/", func(r chi.Router) {
 		r.Post("/", h.ShortenURL)
 		r.Route("/api", func(r chi.Router) {
