@@ -64,6 +64,7 @@ func (m *AuthMiddleware) createToken() (string, error) {
 	claims["userID"] = userID // Установите имя пользователя или идентификатор здесь
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 
+	m.key = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	tokenString, err := token.SignedString([]byte(m.key))
 
 	if err != nil {

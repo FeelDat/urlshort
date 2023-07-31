@@ -118,7 +118,10 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	userID := cookie.Value
+	jwtToken := cookie.Value
+	jwtKey := os.Getenv("JWT_KEY")
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 
 	cntx := context.WithValue(r.Context(), "userID", userID)
 
@@ -194,6 +197,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 	jwtToken := cookie.Value
 	jwtKey := os.Getenv("JWT_KEY")
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 
 	cntx := context.WithValue(r.Context(), "userID", userID)
@@ -260,7 +264,10 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	userID := cookie.Value
+	jwtToken := cookie.Value
+	jwtKey := os.Getenv("JWT_KEY")
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 
 	cntx := context.WithValue(r.Context(), "userID", userID)
 
