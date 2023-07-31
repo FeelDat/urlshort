@@ -119,7 +119,7 @@ func TestShortenURL(t *testing.T) {
 			assert.Equal(t, tt.expectedContentType, resp.Header.Get("Content-Type"))
 
 			if tt.authenticated {
-				urls, err := mockStorage.GetUsersURLS(context.Background(), "testUserID")
+				urls, err := mockStorage.GetUsersURLS(context.Background(), "testUserID", "localhost:8080")
 				require.NoError(t, err)
 				assert.Len(t, urls, 1)
 				assert.Equal(t, urls[0].OriginalURL, tt.longLink)
