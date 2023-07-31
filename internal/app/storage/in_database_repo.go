@@ -82,7 +82,7 @@ func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr st
 func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 
 	urlID := utils.Base62Encode(rand.Uint64())
-	uid := ctx.Value("userID")
+	uid := ctx.Value(models.CtxKey("userID"))
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
@@ -132,7 +132,7 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatch
 
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-		uid := ctx.Value("userID")
+		uid := ctx.Value(models.CtxKey("userID"))
 		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, uid, urlID, req.OriginalURL)
 		if err != nil {
 			return nil, err
