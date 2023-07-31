@@ -3,11 +3,10 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/golang-jwt/jwt/v5"
 )
 
-func GetUserIDFromToken(t string, key models.JWTKey) (string, error) {
+func GetUserIDFromToken(t string, key string) (string, error) {
 	token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
