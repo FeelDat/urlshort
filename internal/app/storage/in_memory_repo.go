@@ -40,7 +40,7 @@ func NewInMemStorage(filePath string) (Repository, error) {
 	}, err
 }
 
-func (s *storage) GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error) {
+func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
 	if urls, ok := s.UserURLs[userID]; ok {
 		return urls, nil
 	}
