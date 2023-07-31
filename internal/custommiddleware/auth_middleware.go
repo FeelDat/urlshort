@@ -52,7 +52,7 @@ func (m *AuthMiddleware) validToken(t string) bool {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method")
 		}
-		return m.key, nil
+		return []byte(m.key), nil
 	})
 
 	if err != nil || !token.Valid {
