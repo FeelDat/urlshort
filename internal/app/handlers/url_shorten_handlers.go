@@ -37,6 +37,8 @@ func NewHandler(repo storage.Repository, baseAddress string, logger *zap.Sugared
 	}
 }
 
+var jwtKey models.JWTKey
+
 func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("jwt")
 	if err != nil {
@@ -49,7 +51,7 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	}
 	jwtToken := cookie.Value
 	//jwtKey := os.Getenv("JWT_KEY")
-	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -125,7 +127,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	jwtToken := cookie.Value
 	//jwtKey := os.Getenv("JWT_KEY")
-	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -205,7 +207,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 	jwtToken := cookie.Value
 	//jwtKey := os.Getenv("JWT_KEY")
-	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -277,7 +279,7 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 	}
 	jwtToken := cookie.Value
 	//jwtKey := os.Getenv("JWT_KEY")
-	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
