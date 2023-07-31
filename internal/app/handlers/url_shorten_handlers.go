@@ -52,7 +52,10 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	jwtKey := os.Getenv("JWT_KEY")
 	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
-
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	urls, err := h.repository.GetUsersURLS(r.Context(), userID, h.baseAddress)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -125,7 +128,10 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 	jwtKey := os.Getenv("JWT_KEY")
 	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
-
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	cntx := context.WithValue(r.Context(), "userID", userID)
 
 	shortURL, err := h.repository.ShortenURL(cntx, string(request.URL))
@@ -202,7 +208,10 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	jwtKey := os.Getenv("JWT_KEY")
 	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
-
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	cntx := context.WithValue(r.Context(), "userID", userID)
 
 	shortURL, err := h.repository.ShortenURL(cntx, string(fullURL))
@@ -271,7 +280,10 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 	jwtKey := os.Getenv("JWT_KEY")
 	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
-
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	cntx := context.WithValue(r.Context(), "userID", userID)
 
 	result, err := h.repository.ShortenURLBatch(cntx, urls, h.baseAddress)
