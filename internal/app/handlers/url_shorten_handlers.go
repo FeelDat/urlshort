@@ -48,7 +48,10 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Bad request", http.StatusBadRequest)
 		return
 	}
-	userID := cookie.Value
+	jwtToken := cookie.Value
+	jwtKey := os.Getenv("JWT_KEY")
+	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 
 	urls, err := h.repository.GetUsersURLS(r.Context(), userID)
 	if err != nil {
