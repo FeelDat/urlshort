@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
-	"os"
 )
 
 type HandlerInterface interface {
@@ -49,8 +48,8 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	jwtKey := os.Getenv("JWT_KEY")
-	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	//jwtKey := os.Getenv("JWT_KEY")
+	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -125,8 +124,8 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	jwtKey := os.Getenv("JWT_KEY")
-	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	//jwtKey := os.Getenv("JWT_KEY")
+	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -205,8 +204,8 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	jwtKey := os.Getenv("JWT_KEY")
-	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	//jwtKey := os.Getenv("JWT_KEY")
+	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -277,8 +276,8 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	jwtKey := os.Getenv("JWT_KEY")
-	jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+	//jwtKey := os.Getenv("JWT_KEY")
+	jwtKey := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
 	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
