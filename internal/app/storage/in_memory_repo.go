@@ -50,7 +50,7 @@ func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr stri
 
 func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 	urlID := utils.Base62Encode(rand.Uint64())
-	uid := ctx.Value("userID")
+	uid := ctx.Value(models.CtxKey("userID"))
 
 	urlInfo := URLInfo{
 		UUID:        uid.(string),
@@ -88,7 +88,7 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 	}
 
 	responses := make([]models.URLRBatchResponse, len(batch))
-	uid := ctx.Value("userID")
+	uid := ctx.Value(models.CtxKey("userID"))
 
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
