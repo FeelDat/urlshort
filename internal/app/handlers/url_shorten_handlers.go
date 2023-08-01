@@ -15,7 +15,7 @@ import (
 	"net/http"
 )
 
-type HandlerInterface interface {
+type Handler interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
 	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
@@ -29,7 +29,7 @@ type handler struct {
 	logger      *zap.SugaredLogger
 }
 
-func NewHandler(repo storage.Repository, baseAddress string, logger *zap.SugaredLogger) HandlerInterface {
+func NewHandler(repo storage.Repository, baseAddress string, logger *zap.SugaredLogger) Handler {
 	return &handler{
 		repository:  repo,
 		baseAddress: baseAddress,

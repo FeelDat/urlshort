@@ -36,7 +36,7 @@ func main() {
 
 	r := chi.NewRouter()
 
-	var h handlers.HandlerInterface
+	var h handlers.Handler
 	var db *sql.DB
 
 	if conf.DatabaseAddress != "" {

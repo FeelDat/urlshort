@@ -109,7 +109,6 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 		}
 
 		s.Links[urlID] = req.OriginalURL
-		// Add the URL to UserURLs
 		s.UserURLs[uid.(string)] = append(s.UserURLs[uid.(string)], models.UsersURLS{OriginalURL: req.OriginalURL, ShortURL: urlID})
 
 		responses[i] = models.URLRBatchResponse{
