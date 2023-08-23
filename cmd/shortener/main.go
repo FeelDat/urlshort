@@ -79,6 +79,7 @@ func main() {
 			})
 			r.Route("/user", func(r chi.Router) {
 				r.Get("/urls", h.GetUsersURLS)
+				r.Delete("/urls", h.DeleteURLS)
 			})
 		})
 		r.Get("/{id}", h.GetFullURL)
