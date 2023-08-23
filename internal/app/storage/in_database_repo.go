@@ -65,7 +65,7 @@ func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []
 	}
 	defer tx.Rollback()
 
-	_, err = s.db.ExecContext(ctrl, `UPDATE urls SET delflag = true WHERE uuid = $1 AND short_url = ANY($2)`, userID, urls)
+	_, err = s.db.ExecContext(ctrl, `UPDATE urls SET delflag = true WHERE uuid = $1 AND short_url = ANY($2)`, userID, shortLinks)
 	if err != nil {
 		logger.Errorw("failed to delete urls", "error", err)
 		return
