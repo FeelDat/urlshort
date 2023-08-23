@@ -8,6 +8,7 @@ import (
 	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.uber.org/zap"
 	"log"
 	"math/rand"
 	"time"
@@ -18,6 +19,7 @@ type Repository interface {
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
 	ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error)
 	GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error)
+	DeleteURLS(ctx context.Context, userID string, shortLink []string, logger *zap.SugaredLogger)
 }
 
 type dbStorage struct {
@@ -38,7 +40,7 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 	}
 	defer tx.Rollback()
 
-	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, uuid varchar(36), short_url varchar(20), original_url text)")
+	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, delflag boolean, uuid varchar(36), short_url varchar(20), original_url text)")
 	if err != nil {
 		return err
 	}
@@ -49,6 +51,25 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 	}
 
 	return tx.Commit()
+}
+
+func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
+
+	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
+	tx, err := s.db.BeginTx(ctrl, nil)
+	if err != nil {
+		logger.Errorw("failed to delete urls", "error", err)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = s.db.ExecContext(ctrl, `UPDATE urls SET delflag = true WHERE uuid = $1 AND short_url = ANY($2)`, userID, urls)
+	if err != nil {
+		logger.Errorw("failed to delete urls", "error", err)
+		return
+	}
 }
 
 func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
@@ -102,10 +123,23 @@ func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, er
 func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 
 	var originalURL string
+	var isDeleted bool
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
-	err := s.db.QueryRowContext(ctrl, `SELECT original_url FROM urls WHERE short_url = $1`, shortLink).Scan(&originalURL)
+
+	//check if link is deleted
+	err := s.db.QueryRowContext(ctrl, `SELECT delflag FROM urls WHERE short_url = $1`, shortLink).Scan(&isDeleted)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", errors.New("link does not exist")
+		}
+		return "", err
+	}
+	if isDeleted {
+		return "", errors.New("link is deleted")
+	}
+	err = s.db.QueryRowContext(ctrl, `SELECT original_url FROM urls WHERE short_url = $1`, shortLink).Scan(&originalURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("link does not exist")

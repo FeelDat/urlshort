@@ -21,6 +21,7 @@ type Handler interface {
 	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
 	ShortenURLBatch(w http.ResponseWriter, r *http.Request)
 	GetUsersURLS(w http.ResponseWriter, r *http.Request)
+	DeleteURLS(w http.ResponseWriter, r *http.Request)
 }
 
 type handler struct {
@@ -41,6 +42,45 @@ var ctxKey models.CtxKey
 
 // for tests purposes, usually get it from env varibale
 const jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+
+func (h *handler) DeleteURLS(w http.ResponseWriter, r *http.Request) {
+
+	cookie, err := r.Cookie("jwt")
+	if err != nil {
+		if err == http.ErrNoCookie {
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Bad request", http.StatusBadRequest)
+		return
+	}
+	jwtToken := cookie.Value
+	//jwtKey := os.Getenv("JWT_KEY")
+	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var urlsToDelete []string
+	err = json.NewDecoder(r.Body).Decode(&urlsToDelete)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if len(urlsToDelete) == 0 {
+		http.Error(w, "empty batch", http.StatusBadRequest)
+		h.logger.Errorw("URLs batch is empty", "error", err)
+		return
+	}
+
+	go func() {
+		h.repository.DeleteURLS(r.Context(), userID, urlsToDelete, h.logger)
+	}()
+
+	w.WriteHeader(http.StatusAccepted)
+
+}
 
 func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("jwt")
@@ -86,8 +126,13 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := h.repository.GetFullURL(r.Context(), shortURL)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		if err.Error() == "link is deleted" {
+			w.WriteHeader(http.StatusGone)
+			return
+		} else if err.Error() == "link does not exist" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
 	}
 
 	w.Header().Set("Location", v)

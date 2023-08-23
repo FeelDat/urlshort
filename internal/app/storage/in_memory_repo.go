@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
+	"go.uber.org/zap"
 	"math/rand"
 	"os"
 )
@@ -38,6 +39,9 @@ func NewInMemStorage(filePath string) (Repository, error) {
 		UserURLs: make(map[string][]models.UsersURLS),
 		file:     file,
 	}, err
+}
+
+func (s *storage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
 }
 
 func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
