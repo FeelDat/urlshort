@@ -40,7 +40,7 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 	}
 	defer tx.Rollback()
 
-	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, delflag boolean, uuid varchar(36), short_url varchar(20), original_url text)")
+	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, delflag boolean DEFAULT false, uuid varchar(36), short_url varchar(20), original_url text)")
 	if err != nil {
 		return err
 	}
