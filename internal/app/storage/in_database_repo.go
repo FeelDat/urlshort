@@ -55,21 +55,19 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 
 func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
 
-	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
-	defer cancel()
-
-	tx, err := s.db.BeginTx(ctrl, nil)
+	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		logger.Errorw("failed to delete urls", "error", err)
 		return
 	}
 	defer tx.Rollback()
 
-	_, err = s.db.ExecContext(ctrl, `UPDATE urls SET delflag = true WHERE uuid = $1 AND short_url = ANY($2)`, userID, shortLinks)
+	_, err = s.db.ExecContext(ctx, `UPDATE urls SET delflag = true WHERE uuid = $1 AND short_url = ANY($2)`, userID, shortLinks)
 	if err != nil {
 		logger.Errorw("failed to delete urls", "error", err)
 		return
 	}
+	tx.Commit()
 }
 
 func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {

@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"time"
 )
 
 type Handler interface {
@@ -75,7 +76,9 @@ func (h *handler) DeleteURLS(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go func() {
-		h.repository.DeleteURLS(r.Context(), userID, urlsToDelete, h.logger)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute) // Example: 5 minutes timeout
+		defer cancel()
+		h.repository.DeleteURLS(ctx, userID, urlsToDelete, h.logger)
 	}()
 
 	w.WriteHeader(http.StatusAccepted)
