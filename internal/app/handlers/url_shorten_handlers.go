@@ -127,9 +127,11 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	v, err := h.repository.GetFullURL(r.Context(), shortURL)
 	if err != nil {
 		if err.Error() == "link is deleted" {
+			h.logger.Errorw("Link is deleted", "error", err)
 			w.WriteHeader(http.StatusGone)
 			return
 		} else if err.Error() == "link does not exist" {
+			h.logger.Errorw("Link does not exist", "error", err)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
