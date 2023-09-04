@@ -6,7 +6,7 @@ import (
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
-	"github.com/google/uuid"
+	"go.uber.org/zap"
 	"math/rand"
 	"os"
 )
@@ -18,12 +18,12 @@ type URLInfo struct {
 }
 
 type storage struct {
-	Links map[string]string
-	file  *os.File
+	Links    map[string]string
+	UserURLs map[string][]models.UsersURLS
+	file     *os.File
 }
 
 func NewInMemStorage(filePath string) (Repository, error) {
-
 	var file *os.File
 	var err error
 
@@ -35,19 +35,29 @@ func NewInMemStorage(filePath string) (Repository, error) {
 	}
 
 	return &storage{
-		Links: make(map[string]string),
-		file:  file,
+		Links:    make(map[string]string),
+		UserURLs: make(map[string][]models.UsersURLS),
+		file:     file,
 	}, err
+}
 
+func (s *storage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
+}
+
+func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
+	if urls, ok := s.UserURLs[userID]; ok {
+		return urls, nil
+	}
+
+	return nil, errors.New("no URLs found for the given userID")
 }
 
 func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
-
 	urlID := utils.Base62Encode(rand.Uint64())
-	uid := uuid.NewString()
+	uid := ctx.Value(models.CtxKey("userID"))
 
 	urlInfo := URLInfo{
-		UUID:        uid,
+		UUID:        uid.(string),
 		ShortURL:    urlID,
 		OriginalURL: fullLink,
 	}
@@ -63,31 +73,31 @@ func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, erro
 	}
 	s.Links[urlID] = fullLink
 
+	s.UserURLs[uid.(string)] = append(s.UserURLs[uid.(string)], models.UsersURLS{OriginalURL: fullLink, ShortURL: urlID})
+
 	return urlID, nil
 }
 
 func (s *storage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
-
 	val, ok := s.Links[shortLink]
 	if !ok {
 		return "", errors.New("link does not exist")
 	}
 	return val, nil
-
 }
 
 func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
-
 	if len(batch) == 0 {
 		return nil, errors.New("empty batch")
 	}
 
 	responses := make([]models.URLRBatchResponse, len(batch))
+	uid := ctx.Value(models.CtxKey("userID"))
+
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-		uid := uuid.NewString()
 		urlInfo := URLInfo{
-			UUID:        uid,
+			UUID:        uid.(string),
 			ShortURL:    urlID,
 			OriginalURL: req.OriginalURL,
 		}
@@ -103,6 +113,7 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 		}
 
 		s.Links[urlID] = req.OriginalURL
+		s.UserURLs[uid.(string)] = append(s.UserURLs[uid.(string)], models.UsersURLS{OriginalURL: req.OriginalURL, ShortURL: urlID})
 
 		responses[i] = models.URLRBatchResponse{
 			CorrelationID: req.CorrelationID,
@@ -111,5 +122,4 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 	}
 
 	return responses, nil
-
 }

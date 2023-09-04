@@ -6,9 +6,10 @@ import (
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/utils"
-	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"go.uber.org/zap"
+	"log"
 	"math/rand"
 	"time"
 )
@@ -17,45 +18,90 @@ type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
 	ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error)
+	GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error)
+	DeleteURLS(ctx context.Context, userID string, shortLink []string, logger *zap.SugaredLogger)
 }
 
 type dbStorage struct {
 	db *sql.DB
 }
 
-func NewDBStorage(ctx context.Context, db *sql.DB) (Repository, error) {
+func NewDBStorage(db *sql.DB) Repository {
+	return &dbStorage{db: db}
+}
 
+func InitDB(ctx context.Context, db *sql.DB) error {
 	ctrl, cancel := context.WithTimeout(ctx, time.Millisecond*500)
 	defer cancel()
 
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer tx.Rollback()
 
-	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, uuid varchar(36), short_url varchar(20), original_url text)")
+	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, delflag boolean DEFAULT false, uuid varchar(36), short_url varchar(20), original_url text)")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	_, err = db.ExecContext(ctrl, "CREATE UNIQUE INDEX IF NOT EXISTS original_url_unique ON urls(original_url)")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	return tx.Commit()
+}
+
+func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
+
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		logger.Errorw("failed to delete urls", "error", err)
+		return
+	}
+	defer tx.Rollback()
+
+	_, err = s.db.ExecContext(ctx, `UPDATE urls SET delflag = true WHERE uuid = $1 AND short_url = ANY($2)`, userID, shortLinks)
+	if err != nil {
+		logger.Errorw("failed to delete urls", "error", err)
+		return
+	}
+	tx.Commit()
+}
+
+func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
+
+	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
+	defer cancel()
+
+	rows, err := s.db.QueryContext(ctrl, `SELECT short_url, original_url FROM urls WHERE uuid = $1`, userID)
+	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
 
-	return &dbStorage{db: db}, err
+	var urls []models.UsersURLS
 
+	for rows.Next() {
+		var u models.UsersURLS
+		if err := rows.Scan(&u.ShortURL, &u.OriginalURL); err != nil {
+			log.Fatal(err)
+		}
+		u.ShortURL = baseAddr + "/" + u.ShortURL
+		urls = append(urls, u)
+	}
+	if err := rows.Err(); err != nil {
+		log.Fatal(err)
+	}
+
+	return urls, err
 }
 
 func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 
 	urlID := utils.Base62Encode(rand.Uint64())
-	uid := uuid.NewString()
+	uid := ctx.Value(models.CtxKey("userID"))
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
@@ -75,10 +121,23 @@ func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, er
 func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 
 	var originalURL string
+	var isDeleted bool
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
-	err := s.db.QueryRowContext(ctrl, `SELECT original_url FROM urls WHERE short_url = $1`, shortLink).Scan(&originalURL)
+
+	//check if link is deleted
+	err := s.db.QueryRowContext(ctrl, `SELECT delflag FROM urls WHERE short_url = $1`, shortLink).Scan(&isDeleted)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", errors.New("link does not exist")
+		}
+		return "", err
+	}
+	if isDeleted {
+		return "", errors.New("link is deleted")
+	}
+	err = s.db.QueryRowContext(ctrl, `SELECT original_url FROM urls WHERE short_url = $1`, shortLink).Scan(&originalURL)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return "", errors.New("link does not exist")
@@ -105,7 +164,8 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatch
 
 	for i, req := range batch {
 		urlID := utils.Base62Encode(rand.Uint64())
-		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, req.CorrelationID, urlID, req.OriginalURL)
+		uid := ctx.Value(models.CtxKey("userID"))
+		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, uid, urlID, req.OriginalURL)
 		if err != nil {
 			return nil, err
 		}

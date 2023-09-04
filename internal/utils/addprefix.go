@@ -1,10 +1,19 @@
 package utils
 
-import "strings"
+import (
+	"net/url"
+)
 
-func AddPrefix(addr string) string {
-	if !strings.HasPrefix(addr, "http://") && !strings.HasPrefix(addr, "https://") {
-		addr = "http://" + addr
+func AddPrefix(addr string) (string, error) {
+
+	v, err := url.Parse(addr)
+	if err != nil {
+		return "", err
 	}
-	return addr
+
+	if v.Scheme == "" {
+		v.Scheme = "http"
+	}
+
+	return v.String(), nil
 }
