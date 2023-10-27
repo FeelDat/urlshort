@@ -3,11 +3,11 @@ package handlers
 import (
 	"context"
 	"github.com/FeelDat/urlshort/internal/app/models"
+	"github.com/FeelDat/urlshort/internal/shared"
 	"github.com/FeelDat/urlshort/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/golang/mock/gomock"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -146,7 +146,7 @@ func TestHandlerGetFullURL(t *testing.T) {
 			shortURL:           "localhost:8080/nonexistent",
 			expectedStatusCode: http.StatusNotFound,
 			expectedLocation:   "",
-			repoError:          errors.New("link does not exist"), // Empty result to simulate not found
+			repoError:          shared.ErrLinkNotExists, // Empty result to simulate not found
 		},
 		{
 			name:               "Empty Short URL",
@@ -160,7 +160,7 @@ func TestHandlerGetFullURL(t *testing.T) {
 			shortURL:           "localhost:8080/error",
 			expectedStatusCode: http.StatusGone,
 			expectedLocation:   "",
-			repoError:          errors.New("link is deleted"),
+			repoError:          shared.ErrLinkDeleted,
 		},
 	}
 
