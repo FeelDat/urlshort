@@ -14,7 +14,6 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"time"
@@ -56,7 +55,9 @@ var jwtKey string
 func init() {
 	jwtKey = os.Getenv("JWT_KEY")
 	if jwtKey == "" {
-		log.Fatal("JWT_TOKEN not set in environment variables")
+		//for autotest purposes
+		jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+		//log.Fatal("JWT_TOKEN not set in environment variables")
 	}
 }
 

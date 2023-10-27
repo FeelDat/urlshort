@@ -28,7 +28,7 @@ func NewConfig() (*Config, error) {
 	c := &Config{}
 
 	// Define command line flags.
-	flag.StringVar(&c.ServerAddress, "a", ":8080", "server address")
+	flag.StringVar(&c.ServerAddress, "a", "localhost:8080", "server address")
 	flag.StringVar(&c.BaseAddress, "b", "http://localhost:8080", "base URL for responses with short links")
 	flag.StringVar(&c.FilePath, "f", "/tmp/short-url-db.json", "path for saving a file with short URLs")
 	flag.StringVar(&c.DatabaseAddress, "d", "", "database address")
