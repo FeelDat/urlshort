@@ -190,30 +190,31 @@ func TestHandlerGetFullURL(t *testing.T) {
 	}
 }
 
-func TestHandlerShortenURLJSON(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	defer ctrl.Finish()
-
-	// Create a mock repository
-	mockRepo := mocks.NewMockRepository(ctrl)
-
-	// Create a handler with the mock repository
-	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
-
-	testCases := []struct {
-		name               string
-		longLink           string
-		expectedStatusCode int
-		expectedJSON       string
-		repoResult         string // Mocked repository result
-		repoError          error  // Mocked repository error
-	}{
-		{
-
-		}
-	}
-
-}
+//
+//func TestHandlerShortenURLJSON(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	defer ctrl.Finish()
+//
+//	// Create a mock repository
+//	mockRepo := mocks.NewMockRepository(ctrl)
+//
+//	// Create a handler with the mock repository
+//	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+//
+//	testCases := []struct {
+//		name               string
+//		longLink           string
+//		expectedStatusCode int
+//		expectedJSON       string
+//		repoResult         string // Mocked repository result
+//		repoError          error  // Mocked repository error
+//	}{
+//		{
+//
+//		}
+//	}
+//
+//}
 
 //
 //func TestHandlerShortenURLBatch(t *testing.T) {
