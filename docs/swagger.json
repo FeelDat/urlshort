@@ -1,0 +1,140 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a URL shortener service API.",
+        "title": "URL Shortener API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8080",
+    "basePath": "/",
+    "paths": {
+        "/shorten/batch": {
+            "post": {
+                "description": "Shorten a batch of URLs.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "description": "List of URLs to shorten",
+                        "name": "urls",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.URLBatchRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/shorten/json": {
+            "post": {
+                "description": "Shorten a given URL and return in JSON format.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "description": "URL to shorten",
+                        "name": "url",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.JSONRequest"
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/urls": {
+            "delete": {
+                "description": "Delete a batch of URLs for the authenticated user.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "description": "List of URLs to delete",
+                        "name": "urls",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                ],
+                "responses": {}
+            }
+        },
+        "/users/urls": {
+            "get": {
+                "description": "Get all URLs shortened by the authenticated user.",
+                "produces": [
+                    "application/json"
+                ],
+                "responses": {}
+            }
+        },
+        "/{id}": {
+            "get": {
+                "description": "Retrieve the original URL using the shortened one.",
+                "produces": [
+                    "application/json"
+                ],
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Shortened URL ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {}
+            }
+        }
+    },
+    "definitions": {
+        "models.JSONRequest": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.URLBatchRequest": {
+            "type": "object",
+            "properties": {
+                "correlation_id": {
+                    "type": "string"
+                },
+                "original_url": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}
