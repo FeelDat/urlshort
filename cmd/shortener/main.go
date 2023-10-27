@@ -42,7 +42,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	// Middleware initialization
-	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
+	//loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
 	authMiddleware := custommiddleware.NewAuthMiddleware()
 
 	// Router initialization
