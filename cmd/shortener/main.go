@@ -44,6 +44,7 @@ func main() {
 	// Middleware initialization
 	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
 	authMiddleware := custommiddleware.NewAuthMiddleware()
+	compressMiddleware := custommiddleware.NewCompressMiddleware()
 
 	// Router initialization
 	r := chi.NewRouter()
@@ -83,6 +84,7 @@ func main() {
 			"text/html"))
 	r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Use(authMiddleware.AuthMiddleware)
+	r.Use(compressMiddleware.CompressMiddleware)
 
 	// Debug profiler mount
 	r.Mount("/debug", middleware.Profiler())
