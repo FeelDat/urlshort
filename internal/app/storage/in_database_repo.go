@@ -175,7 +175,6 @@ func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, e
 
 	return originalURL, nil
 
-	return originalURL, nil
 }
 
 // ShortenURLBatch inserts a batch of original URLs into the database and returns the corresponding shortened URLs.
