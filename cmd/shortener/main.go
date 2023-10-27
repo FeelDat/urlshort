@@ -42,7 +42,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	// Middleware initialization
-	//loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
+	loggerMiddleware := custommiddleware.NewLoggerMiddleware(logger)
 	authMiddleware := custommiddleware.NewAuthMiddleware()
 
 	// Router initialization
@@ -78,10 +78,10 @@ func main() {
 	}
 
 	// Middleware registration
-	//r.Use(middleware.Compress(5,
-	//	"application/json"+
-	//		"text/html"))
-	//r.Use(loggerMiddleware.LoggerMiddleware)
+	r.Use(middleware.Compress(5,
+		"application/json"+
+			"text/html"))
+	r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Use(authMiddleware.AuthMiddleware)
 
 	// Debug profiler mount
