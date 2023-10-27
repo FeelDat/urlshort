@@ -78,10 +78,10 @@ func main() {
 	}
 
 	// Middleware registration
-	r.Use(middleware.Compress(5,
-		"application/json"+
-			"text/html"))
-	r.Use(loggerMiddleware.LoggerMiddleware)
+	//r.Use(middleware.Compress(5,
+	//	"application/json"+
+	//		"text/html"))
+	//r.Use(loggerMiddleware.LoggerMiddleware)
 	r.Use(authMiddleware.AuthMiddleware)
 
 	// Debug profiler mount
