@@ -5,6 +5,7 @@ package custommiddleware
 import (
 	"go.uber.org/zap"
 	"net/http"
+	"sync"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type LoggerMiddleware struct {
 	// logger is an instance of a zap.SugaredLogger that is used to
 	// log information about HTTP requests.
 	logger *zap.SugaredLogger
+	pool   sync.Pool
 }
 
 // NewLoggerMiddleware initializes and returns a new LoggerMiddleware instance.
@@ -22,6 +24,13 @@ type LoggerMiddleware struct {
 func NewLoggerMiddleware(logger *zap.SugaredLogger) *LoggerMiddleware {
 	return &LoggerMiddleware{
 		logger: logger,
+		pool: sync.Pool{
+			New: func() interface{} {
+				return &loggingResponseWriter{
+					responseData: &responseData{},
+				}
+			},
+		},
 	}
 }
 
@@ -31,26 +40,24 @@ func NewLoggerMiddleware(logger *zap.SugaredLogger) *LoggerMiddleware {
 func (m *LoggerMiddleware) LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
-		rd := &responseData{
-			status: 0,
-			size:   0,
-		}
 
-		lw := loggingResponseWriter{
-			ResponseWriter: w,
-			responseData:   rd,
-		}
+		lw := m.pool.Get().(*loggingResponseWriter)
+		lw.ResponseWriter = w
+		lw.responseData.status = 0
+		lw.responseData.size = 0
 
-		next.ServeHTTP(&lw, r)
+		next.ServeHTTP(lw, r)
 
 		duration := time.Since(start)
 
-		m.logger.Infoln(
+		m.logger.Info(
 			"uri", r.RequestURI,
 			"method", r.Method,
-			"status", rd.status,
+			"status", lw.responseData.status,
 			"duration", duration,
-			"size", rd.size,
+			"size", lw.responseData.size,
 		)
+
+		m.pool.Put(lw)
 	})
 }
