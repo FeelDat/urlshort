@@ -103,7 +103,6 @@ func main() {
 			})
 		})
 		r.Get("/{id}", h.GetFullURL)
-		// Ping route for health check
 		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
 			if conf.DatabaseAddress == "" {
 				w.WriteHeader(http.StatusBadRequest)

@@ -61,9 +61,6 @@ func init() {
 	}
 }
 
-// for tests purposes, usually get it from env varibale
-//const jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
-
 // DeleteURLS @Summary Delete multiple URLs
 // @Description Delete a batch of URLs for the authenticated user.
 // @Accept  json
