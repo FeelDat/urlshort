@@ -74,6 +74,8 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 
 			handler.ServeHTTP(rr, req)
 
+			rr.Result().Body.Close() // Close the response body here
+
 			// Check the status code
 			if rr.Code != tt.expectedStatus {
 				t.Errorf("%s: handler returned wrong status code: got %v, want %v", tt.name, rr.Code, tt.expectedStatus)
