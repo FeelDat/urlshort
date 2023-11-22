@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -113,9 +114,6 @@ func TestShortenURL(t *testing.T) {
 		})
 	}
 }
-
-//TODO write test for other handlers
-
 func TestHandlerGetFullURL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -189,32 +187,64 @@ func TestHandlerGetFullURL(t *testing.T) {
 		})
 	}
 }
+func TestHandlerShortenURLJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 
-//
-//func TestHandlerShortenURLJSON(t *testing.T) {
-//	ctrl := gomock.NewController(t)
-//	defer ctrl.Finish()
-//
-//	// Create a mock repository
-//	mockRepo := mocks.NewMockRepository(ctrl)
-//
-//	// Create a handler with the mock repository
-//	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
-//
-//	testCases := []struct {
-//		name               string
-//		longLink           string
-//		expectedStatusCode int
-//		expectedJSON       string
-//		repoResult         string // Mocked repository result
-//		repoError          error  // Mocked repository error
-//	}{
-//		{
-//
-//		}
-//	}
-//
-//}
+	// Create a mock repository
+	mockRepo := mocks.NewMockRepository(ctrl)
+
+	// Create a handler with the mock repository
+	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+
+	testCases := []struct {
+		name               string
+		requestBody        string
+		expectedStatusCode int
+		expectedJSON       string
+		repoResult         string // Mocked repository result
+		repoError          error  // Mocked repository error
+	}{
+		{
+			name:               "Successful URL Shortening",
+			requestBody:        `{"url":"https://example.com"}`,
+			expectedStatusCode: http.StatusCreated,
+			expectedJSON:       `{"result":"localhost:8080/shortenedURL"}`,
+			repoResult:         "shortenedURL",
+		},
+		{
+			name:               "Invalid JSON Request",
+			requestBody:        `{"url":}`,
+			expectedStatusCode: http.StatusBadRequest,
+			expectedJSON:       ``,
+			repoError:          nil,
+		},
+		// Add other cases here
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock the repository behavior
+			if tt.repoError == nil {
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), tt.requestBody).Return(tt.repoResult, tt.repoError)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.requestBody))
+			rr := httptest.NewRecorder()
+
+			handler.ShortenURLJSON(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+
+			if tt.expectedJSON != "" {
+				body, _ := io.ReadAll(rr.Body)
+				assert.JSONEq(t, tt.expectedJSON, string(body))
+			}
+		})
+	}
+}
+
+//TODO finish other endpoints tests
 
 //
 //func TestHandlerShortenURLBatch(t *testing.T) {

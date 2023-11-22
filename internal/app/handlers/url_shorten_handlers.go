@@ -7,7 +7,6 @@ import (
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/shared"
-	"github.com/FeelDat/urlshort/internal/utils"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -80,7 +79,7 @@ func (h *handler) DeleteURLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -124,7 +123,7 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -200,7 +199,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.baseAddress, err = utils.AddPrefix(h.baseAddress)
+	h.baseAddress, err = shared.AddPrefix(h.baseAddress)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
@@ -216,7 +215,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -284,7 +283,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.baseAddress, err = utils.AddPrefix(h.baseAddress)
+	h.baseAddress, err = shared.AddPrefix(h.baseAddress)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
@@ -300,7 +299,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -360,7 +359,7 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.baseAddress, err = utils.AddPrefix(h.baseAddress)
+	h.baseAddress, err = shared.AddPrefix(h.baseAddress)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
@@ -376,7 +375,7 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

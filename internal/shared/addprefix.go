@@ -1,7 +1,8 @@
-// Package utils contains utility functions used throughout the application.
-package utils
+// Package shared contains utility functions used throughout the application.
+package shared
 
 import (
+	"github.com/pkg/errors"
 	"net/url"
 )
 
@@ -15,7 +16,9 @@ import (
 //   - A string representing the address with a scheme.
 //   - An error if parsing the address fails.
 func AddPrefix(addr string) (string, error) {
-
+	if addr == "" {
+		return "", errors.New("address is empty")
+	}
 	v, err := url.Parse(addr)
 	if err != nil {
 		return "", err

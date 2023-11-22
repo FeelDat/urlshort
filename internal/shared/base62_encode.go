@@ -1,5 +1,5 @@
-// Package utils provides utility functions for various common tasks.
-package utils
+// Package shared provides utility functions for various common tasks.
+package shared
 
 import "strings"
 

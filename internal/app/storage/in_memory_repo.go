@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
-	"github.com/FeelDat/urlshort/internal/utils"
+	"github.com/FeelDat/urlshort/internal/shared"
 	"go.uber.org/zap"
 	"math/rand"
 	"os"
@@ -76,7 +76,7 @@ func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr stri
 // Returns the shortened URL or an error if the process fails.
 
 func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
-	urlID := utils.Base62Encode(rand.Uint64())
+	urlID := shared.Base62Encode(rand.Uint64())
 	uid := ctx.Value(models.CtxKey("userID"))
 
 	urlInfo := URLInfo{
@@ -126,7 +126,7 @@ func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRe
 	uid := ctx.Value(models.CtxKey("userID"))
 
 	for i, req := range batch {
-		urlID := utils.Base62Encode(rand.Uint64())
+		urlID := shared.Base62Encode(rand.Uint64())
 		urlInfo := URLInfo{
 			UUID:        uid.(string),
 			ShortURL:    urlID,
