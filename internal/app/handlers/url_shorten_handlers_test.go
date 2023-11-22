@@ -114,6 +114,7 @@ func TestShortenURL(t *testing.T) {
 		})
 	}
 }
+
 func TestHandlerGetFullURL(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -222,29 +223,27 @@ func TestHandlerShortenURLJSON(t *testing.T) {
 		// Add other cases here
 	}
 
-	for _, tt := range testCases {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			// Mock the repository behavior
-			if tt.repoError == nil {
-				mockRepo.EXPECT().ShortenURL(gomock.Any(), tt.requestBody).Return(tt.repoResult, tt.repoError)
+			if tc.repoError == nil {
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), tc.requestBody).Return(tc.repoResult, tc.repoError)
 			}
 
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.requestBody))
+			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.requestBody))
 			rr := httptest.NewRecorder()
 
 			handler.ShortenURLJSON(rr, req)
 
-			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+			assert.Equal(t, tc.expectedStatusCode, rr.Code)
 
-			if tt.expectedJSON != "" {
+			if tc.expectedJSON != "" {
 				body, _ := io.ReadAll(rr.Body)
-				assert.JSONEq(t, tt.expectedJSON, string(body))
+				assert.JSONEq(t, tc.expectedJSON, string(body))
 			}
 		})
 	}
 }
-
-//TODO finish other endpoints tests
 
 //
 //func TestHandlerShortenURLBatch(t *testing.T) {
