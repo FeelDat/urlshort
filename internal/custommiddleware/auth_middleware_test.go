@@ -73,7 +73,7 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 			tt.setupRequest(req)
 
 			handler.ServeHTTP(rr, req)
-
+			defer rr.Result().Body.Close()
 			// Check the status code
 			if rr.Code != tt.expectedStatus {
 				t.Errorf("%s: handler returned wrong status code: got %v, want %v", tt.name, rr.Code, tt.expectedStatus)
@@ -84,7 +84,6 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 			for _, cookie := range rr.Result().Cookies() {
 				if cookie.Name == "jwt" {
 					foundJWTToken = true
-					rr.Result().Body.Close() // Close the response body here
 					break
 				}
 			}

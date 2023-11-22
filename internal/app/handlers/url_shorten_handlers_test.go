@@ -215,7 +215,7 @@ func TestHandlerShortenURLJSON(t *testing.T) {
 		},
 		{
 			name:               "Invalid JSON Request",
-			requestBody:        `{"url":}`,
+			requestBody:        `{"url":	}`,
 			expectedStatusCode: http.StatusBadRequest,
 			expectedJSON:       ``,
 			repoError:          nil,
