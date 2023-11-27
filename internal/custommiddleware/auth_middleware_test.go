@@ -54,7 +54,6 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 			expectedStatus: http.StatusOK,
 			expectJWTToken: true,
 		},
-		// Additional test cases can be added here
 	}
 
 	for _, tt := range tests {
@@ -69,11 +68,17 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			defer func() {
+				if resp := rr.Result(); resp != nil {
+					resp.Body.Close()
+				}
+			}()
+
 			// Set up the request as per the test case
 			tt.setupRequest(req)
 
 			handler.ServeHTTP(rr, req)
-			defer rr.Result().Body.Close()
+
 			// Check the status code
 			if rr.Code != tt.expectedStatus {
 				t.Errorf("%s: handler returned wrong status code: got %v, want %v", tt.name, rr.Code, tt.expectedStatus)
@@ -87,7 +92,6 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 					break
 				}
 			}
-			rr.Result().Body.Close()
 			if foundJWTToken != tt.expectJWTToken {
 				t.Errorf("%s: expected JWT token presence: %v, found: %v", tt.name, tt.expectJWTToken, foundJWTToken)
 			}
