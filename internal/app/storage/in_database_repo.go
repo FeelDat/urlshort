@@ -20,7 +20,6 @@ import (
 )
 
 // Repository defines the set of methods that a storage system must implement.
-
 type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
@@ -35,7 +34,6 @@ type dbStorage struct {
 }
 
 // NewDBStorage initializes and returns a new dbStorage instance.
-
 func NewDBStorage(db *sql.DB) Repository {
 	return &dbStorage{db: db}
 }
@@ -43,7 +41,6 @@ func NewDBStorage(db *sql.DB) Repository {
 // InitDB initializes the database by creating required tables and indexes.
 //
 // This function is meant to be called during the application's startup.
-
 func InitDB(ctx context.Context, db *sql.DB) error {
 	ctrl, cancel := context.WithTimeout(ctx, time.Millisecond*500)
 	defer cancel()
@@ -72,7 +69,6 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 }
 
 // DeleteURLS deletes a set of URLs associated with a given user ID from the database.
-
 func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -91,7 +87,6 @@ func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []
 }
 
 // GetUsersURLS retrieves all the URLs associated with a given user ID from the database.
-
 func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
@@ -123,7 +118,6 @@ func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr st
 // ShortenURL inserts a new shortened URL into the database.
 //
 // If a URL is already present, it returns the previously shortened URL.
-
 func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 
 	urlID := shared.Base62Encode(rand.Uint64())
@@ -147,7 +141,6 @@ func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, er
 // GetFullURL retrieves the original URL for a given shortened URL from the database.
 //
 // Returns an error if the URL is marked as deleted or does not exist.
-
 func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 
 	var originalURL string
@@ -177,7 +170,6 @@ func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, e
 }
 
 // ShortenURLBatch inserts a batch of original URLs into the database and returns the corresponding shortened URLs.
-
 func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
 
 	if len(batch) == 0 {

@@ -16,7 +16,6 @@ import (
 )
 
 // URLInfo represents the details of a shortened URL.
-
 type URLInfo struct {
 	UUID        string `json:"uuid"`         // The UUID of the user who shortened the URL.
 	ShortURL    string `json:"short_url"`    // The shortened version of the URL.
@@ -55,14 +54,12 @@ func NewInMemStorage(filePath string) (Repository, error) {
 // DeleteURLS deletes a list of URLs for a given user.
 //
 // This function doesn't return anything but can be expanded to return an error if needed.
-
 func (s *storage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
 }
 
 // GetUsersURLS retrieves all the URLs for a given user.
 //
 // Returns a list of URLs or an error if no URLs are found for the given user.
-
 func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
 	if urls, ok := s.UserURLs[userID]; ok {
 		return urls, nil
@@ -74,7 +71,6 @@ func (s *storage) GetUsersURLS(ctx context.Context, userID string, baseAddr stri
 // ShortenURL creates a shortened URL for the given original URL.
 //
 // Returns the shortened URL or an error if the process fails.
-
 func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 	urlID := shared.Base62Encode(rand.Uint64())
 	uid := ctx.Value(models.CtxKey("userID"))
@@ -104,7 +100,6 @@ func (s *storage) ShortenURL(ctx context.Context, fullLink string) (string, erro
 // GetFullURL retrieves the original URL for a given shortened URL.
 //
 // Returns the original URL or an error if the shortened URL does not exist.
-
 func (s *storage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 	val, ok := s.Links[shortLink]
 	if !ok {
@@ -116,7 +111,6 @@ func (s *storage) GetFullURL(ctx context.Context, shortLink string) (string, err
 // ShortenURLBatch creates shortened URLs for a batch of original URLs.
 //
 // Returns a list of responses containing the shortened URLs or an error if the process fails.
-
 func (s *storage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
 	if len(batch) == 0 {
 		return nil, errors.New("empty batch")
