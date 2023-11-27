@@ -24,7 +24,7 @@ import (
 // @host localhost:8080
 // @BasePath /
 // @schemes http https
-
+// Handler defines the set of methods that a handler must implement.
 type Handler interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
@@ -40,6 +40,7 @@ type handler struct {
 	logger      *zap.SugaredLogger
 }
 
+// NewHandler initializes and returns a new handler instance.
 func NewHandler(repo storage.Repository, baseAddress string, logger *zap.SugaredLogger) Handler {
 	return &handler{
 		repository:  repo,
