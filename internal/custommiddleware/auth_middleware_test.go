@@ -87,6 +87,7 @@ func TestAuthMiddleware_AuthMiddleware(t *testing.T) {
 					break
 				}
 			}
+			rr.Result().Body.Close()
 			if foundJWTToken != tt.expectJWTToken {
 				t.Errorf("%s: expected JWT token presence: %v, found: %v", tt.name, tt.expectJWTToken, foundJWTToken)
 			}
