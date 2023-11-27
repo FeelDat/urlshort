@@ -2,5 +2,5 @@ package main
 
 import "testing"
 
-func BlankTest(t *testing.T) {
+func BenchmarkMain(b *testing.B) {
 }
