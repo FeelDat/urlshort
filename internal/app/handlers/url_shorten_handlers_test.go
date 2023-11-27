@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -188,6 +187,7 @@ func TestHandlerGetFullURL(t *testing.T) {
 		})
 	}
 }
+
 func TestHandlerShortenURLJSON(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
@@ -199,48 +199,73 @@ func TestHandlerShortenURLJSON(t *testing.T) {
 	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
 
 	testCases := []struct {
-		name               string
-		requestBody        string
-		expectedStatusCode int
-		expectedJSON       string
-		repoResult         string // Mocked repository result
-		repoError          error  // Mocked repository error
-	}{
+		name                string
+		requestBody         string
+		longLink            string
+		method              string
+		expectedStatusCode  int
+		expectedContentType string
+		authenticated       bool
+	}{{
+		name:                "authenticated request with valid URL",
+		requestBody:         `{"url": "https://practicum.yandex.ru/"}`,
+		longLink:            "https://practicum.yandex.ru/",
+		method:              http.MethodPost,
+		expectedStatusCode:  http.StatusCreated,
+		expectedContentType: "application/json",
+		authenticated:       true,
+	},
 		{
-			name:               "Successful URL Shortening",
-			requestBody:        `{"url":"https://example.com"}`,
-			expectedStatusCode: http.StatusCreated,
-			expectedJSON:       `{"result":"localhost:8080/shortenedURL"}`,
-			repoResult:         "shortenedURL",
+			name:                "unauthenticated request with valid URL",
+			requestBody:         `{"url": "https://practicum.yandex.ru/"}`,
+			longLink:            "https://practicum.yandex.ru/",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusUnauthorized,
+			expectedContentType: "text/plain; charset=utf-8",
+			authenticated:       false,
 		},
 		{
-			name:               "Invalid JSON Request",
-			requestBody:        `{"url":	}`,
-			expectedStatusCode: http.StatusBadRequest,
-			expectedJSON:       ``,
-			repoError:          nil,
+			name:                "authenticated request with invalid URL",
+			requestBody:         `{"url": ""}`,
+			longLink:            "",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "",
+			authenticated:       true,
 		},
-		// Add other cases here
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// Mock the repository behavior
-			if tc.repoError == nil {
-				mockRepo.EXPECT().ShortenURL(gomock.Any(), tc.requestBody).Return(tc.repoResult, tc.repoError)
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, "/shorten", strings.NewReader(tt.requestBody))
+			require.NoError(t, err)
+
+			if tt.authenticated {
+				token, err := newTestToken()
+				require.NoError(t, err)
+				ctx := context.WithValue(req.Context(), models.CtxKey("userID"), "testUserID")
+				req = req.WithContext(ctx)
+				req.AddCookie(&http.Cookie{
+					Name:  "jwt",
+					Value: token,
+				})
+			}
+			if tt.expectedStatusCode == http.StatusCreated {
+				// If the request is expected to succeed, set up the expectation
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), tt.longLink).Return("shortened", nil)
+			} else {
+				// If the request is expected to fail, don't expect ShortenURL to be called
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), gomock.Any()).Times(0)
 			}
 
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tc.requestBody))
 			rr := httptest.NewRecorder()
 
 			handler.ShortenURLJSON(rr, req)
 
-			assert.Equal(t, tc.expectedStatusCode, rr.Code)
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
 
-			if tc.expectedJSON != "" {
-				body, _ := io.ReadAll(rr.Body)
-				assert.JSONEq(t, tc.expectedJSON, string(body))
-			}
+			assert.Equal(t, tt.expectedContentType, rr.Header().Get("Content-Type"))
+
 		})
 	}
 }

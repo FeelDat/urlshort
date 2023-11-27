@@ -193,7 +193,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = json.Unmarshal(buf.Bytes(), &request); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &request); err != nil || len(request.URL) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to unmarshal request body", "error", err)
 		return
