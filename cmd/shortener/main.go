@@ -9,13 +9,13 @@ import (
 	_ "github.com/FeelDat/urlshort/docs"
 	"github.com/FeelDat/urlshort/internal/app/config"
 	"github.com/FeelDat/urlshort/internal/app/handlers"
+	"github.com/FeelDat/urlshort/internal/app/routers"
 	"github.com/FeelDat/urlshort/internal/app/storage"
 	"github.com/FeelDat/urlshort/internal/custommiddleware"
 	log "github.com/FeelDat/urlshort/internal/logger"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"github.com/swaggo/http-swagger"
 	"math/rand"
 	"net/http"
 	_ "net/http/pprof"
@@ -89,35 +89,7 @@ func main() {
 
 	// Debug profiler mount
 	r.Mount("/debug", middleware.Profiler())
-
-	// Routing configuration
-	r.Route("/", func(r chi.Router) {
-		r.Post("/", h.ShortenURL)
-		r.Route("/api", func(r chi.Router) {
-			r.Route("/shorten", func(r chi.Router) {
-				r.Post("/", h.ShortenURLJSON)
-				r.Post("/batch", h.ShortenURLBatch)
-			})
-			r.Route("/user", func(r chi.Router) {
-				r.Get("/urls", h.GetUsersURLS)
-				r.Delete("/urls", h.DeleteURLS)
-			})
-		})
-		r.Get("/{id}", h.GetFullURL)
-		r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
-			if conf.DatabaseAddress == "" {
-				w.WriteHeader(http.StatusBadRequest)
-				return
-			}
-			if err = db.Ping(); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			w.WriteHeader(http.StatusOK)
-		})
-		// Swagger documentation endpoint
-		r.Get("/swagger/*", httpSwagger.WrapHandler)
-	})
+	r.Mount("/", routers.ShortenerRouter(h))
 
 	// Starting HTTP server
 	err = http.ListenAndServe(conf.ServerAddress, r)
