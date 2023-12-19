@@ -6,16 +6,25 @@ import (
 	"encoding/json"
 	"github.com/FeelDat/urlshort/internal/app/models"
 	"github.com/FeelDat/urlshort/internal/app/storage"
-	"github.com/FeelDat/urlshort/internal/utils"
+	"github.com/FeelDat/urlshort/internal/shared"
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
+	"os"
 	"time"
 )
 
+// @title URL Shortener API
+// @version 1.0
+// @description This is a URL shortener service API.
+// @host localhost:8080
+// @BasePath /
+// @schemes http https
+// Handler defines the set of methods that a handler must implement.
 type Handler interface {
 	GetFullURL(w http.ResponseWriter, r *http.Request)
 	ShortenURL(w http.ResponseWriter, r *http.Request)
@@ -31,6 +40,7 @@ type handler struct {
 	logger      *zap.SugaredLogger
 }
 
+// NewHandler initializes and returns a new handler instance.
 func NewHandler(repo storage.Repository, baseAddress string, logger *zap.SugaredLogger) Handler {
 	return &handler{
 		repository:  repo,
@@ -40,10 +50,24 @@ func NewHandler(repo storage.Repository, baseAddress string, logger *zap.Sugared
 }
 
 var ctxKey models.CtxKey
+var jwtKey string
 
-// for tests purposes, usually get it from env varibale
-const jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+func init() {
+	jwtKey = os.Getenv("JWT_KEY")
+	if jwtKey == "" {
+		//for autotest purposes
+		jwtKey = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
+		//log.Fatal("JWT_TOKEN not set in environment variables")
+	}
+}
 
+// DeleteURLS @Summary Delete multiple URLs
+// @Description Delete a batch of URLs for the authenticated user.
+// @Accept  json
+// @Produce  json
+// @Param   urls   body   []string   true  "List of URLs to delete"
+// @Header  200 {string} Token "Successfully deleted"
+// @Router /urls [delete]
 func (h *handler) DeleteURLS(w http.ResponseWriter, r *http.Request) {
 
 	cookie, err := r.Cookie("jwt")
@@ -56,8 +80,7 @@ func (h *handler) DeleteURLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	//jwtKey := os.Getenv("JWT_KEY")
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -85,6 +108,11 @@ func (h *handler) DeleteURLS(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// GetUsersURLS @Summary Retrieve all URLs for the user
+// @Description Get all URLs shortened by the authenticated user.
+// @Produce  json
+// @Header  200 {string} Token "Successfully retrieved URLs"
+// @Router /users/urls [get]
 func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("jwt")
 	if err != nil {
@@ -96,8 +124,7 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	//jwtKey := os.Getenv("JWT_KEY")
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -121,6 +148,11 @@ func (h *handler) GetUsersURLS(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// GetFullURL @Summary Get full URL from shortened URL
+// @Description Retrieve the original URL using the shortened one.
+// @Produce  json
+// @Param   id   path   string   true  "Shortened URL ID"
+// @Router /{id} [get]
 func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	shortURL := chi.URLParam(r, "id")
 	if shortURL == "" {
@@ -129,11 +161,11 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	}
 	v, err := h.repository.GetFullURL(r.Context(), shortURL)
 	if err != nil {
-		if err.Error() == "link is deleted" {
+		if errors.Is(err, shared.ErrLinkDeleted) {
 			h.logger.Errorw("Link is deleted", "error", err)
 			w.WriteHeader(http.StatusGone)
 			return
-		} else if err.Error() == "link does not exist" {
+		} else if errors.Is(err, shared.ErrLinkNotExists) {
 			h.logger.Errorw("Link does not exist", "error", err)
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -144,6 +176,12 @@ func (h *handler) GetFullURL(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
+// ShortenURLJSON @Summary Shorten URL (JSON format)
+// @Description Shorten a given URL and return in JSON format.
+// @Accept  json
+// @Produce  json
+// @Param   url   body   models.JSONRequest   true  "URL to shorten"
+// @Router /shorten/json [post]
 func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	var buf bytes.Buffer
@@ -156,13 +194,13 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err = json.Unmarshal(buf.Bytes(), &request); err != nil {
+	if err = json.Unmarshal(buf.Bytes(), &request); err != nil || len(request.URL) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to unmarshal request body", "error", err)
 		return
 	}
 
-	h.baseAddress, err = utils.AddPrefix(h.baseAddress)
+	h.baseAddress, err = shared.AddPrefix(h.baseAddress)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
@@ -178,8 +216,7 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	//jwtKey := os.Getenv("JWT_KEY")
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -233,6 +270,12 @@ func (h *handler) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 }
 
+// ShortenURL @Summary Shorten URL (JSON format)
+// @Description Shorten a given URL and return in JSON format.
+// @Accept  json
+// @Produce  json
+// @Param   url   body   models.JSONRequest   true  "URL to shorten"
+// @Router /shorten/json [post]
 func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	fullURL, err := io.ReadAll(r.Body)
 	if err != nil || len(fullURL) == 0 {
@@ -241,7 +284,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.baseAddress, err = utils.AddPrefix(h.baseAddress)
+	h.baseAddress, err = shared.AddPrefix(h.baseAddress)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
@@ -257,8 +300,7 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	//jwtKey := os.Getenv("JWT_KEY")
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -296,6 +338,12 @@ func (h *handler) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// ShortenURLBatch @Summary Shorten multiple URLs
+// @Description Shorten a batch of URLs.
+// @Accept  json
+// @Produce  json
+// @Param   urls   body   []models.URLBatchRequest   true  "List of URLs to shorten"
+// @Router /shorten/batch [post]
 func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 
 	urls := make([]models.URLBatchRequest, 0)
@@ -312,7 +360,7 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	h.baseAddress, err = utils.AddPrefix(h.baseAddress)
+	h.baseAddress, err = shared.AddPrefix(h.baseAddress)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		h.logger.Errorw("Failed to add prefix to baseAddress", "error", err)
@@ -328,8 +376,7 @@ func (h *handler) ShortenURLBatch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	jwtToken := cookie.Value
-	//jwtKey := os.Getenv("JWT_KEY")
-	userID, err := utils.GetUserIDFromToken(jwtToken, jwtKey)
+	userID, err := shared.GetUserIDFromToken(jwtToken, jwtKey)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

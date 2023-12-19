@@ -2,42 +2,21 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
-	"github.com/FeelDat/urlshort/internal/app/storage"
+	"github.com/FeelDat/urlshort/internal/shared"
+	"github.com/FeelDat/urlshort/mocks"
 	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
 )
-
-type mockStorage struct {
-	Links   map[string]string
-	Users   map[string][]models.UsersURLS
-	file    *os.File
-	encoder *json.Encoder
-}
-
-func (m *mockStorage) GetUsersURLS(ctx context.Context, userID string) ([]models.UsersURLS, error) {
-	if urls, ok := m.Users[userID]; ok {
-		return urls, nil
-	}
-	return nil, errors.New("user not found")
-}
-
-func (m *mockStorage) ShortenURL(ctx context.Context, fullURL string, userID string) (string, error) {
-	shortURL := "UySmre7XjFr"
-	m.Links[shortURL] = fullURL
-	m.Users[userID] = append(m.Users[userID], models.UsersURLS{ShortURL: shortURL, OriginalURL: fullURL})
-	return shortURL, nil
-}
 
 func newTestToken() (string, error) {
 	key := "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
@@ -56,6 +35,15 @@ func newTestToken() (string, error) {
 }
 
 func TestShortenURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Create a mock repository
+	mockRepo := mocks.NewMockRepository(ctrl)
+
+	// Create a handler with the mock repository
+	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+
 	testCases := []struct {
 		name                string
 		longLink            string
@@ -65,7 +53,7 @@ func TestShortenURL(t *testing.T) {
 		authenticated       bool
 	}{
 		{
-			name:                "authenticated request",
+			name:                "authenticated request with valid URL",
 			longLink:            "https://practicum.yandex.ru/",
 			method:              http.MethodPost,
 			expectedStatusCode:  http.StatusCreated,
@@ -73,57 +61,248 @@ func TestShortenURL(t *testing.T) {
 			authenticated:       true,
 		},
 		{
-			name:                "unauthenticated request",
+			name:                "unauthenticated request with valid URL",
 			longLink:            "https://practicum.yandex.ru/",
 			method:              http.MethodPost,
 			expectedStatusCode:  http.StatusUnauthorized,
 			expectedContentType: "text/plain; charset=utf-8",
 			authenticated:       false,
 		},
+		{
+			name:                "authenticated request with invalid URL",
+			longLink:            "",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "",
+			authenticated:       true,
+		},
 	}
-
-	mockStorage, _ := storage.NewInMemStorage("short-url-db.json")
-	mockHandler := NewHandler(mockStorage, "localhost:8080", nil)
-
-	token, err := newTestToken()
-	require.NoError(t, err)
-
-	defer os.Remove("short-url-db.json")
-
-	router := chi.NewRouter()
-	router.Post("/", mockHandler.ShortenURL)
-
-	ts := httptest.NewServer(router)
-	defer ts.Close()
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			r, err := http.NewRequest(tt.method, ts.URL+"/", strings.NewReader(tt.longLink))
+			reqBody := strings.NewReader(tt.longLink)
+			req, err := http.NewRequest(tt.method, "/", reqBody)
 			require.NoError(t, err)
 
 			if tt.authenticated {
-				r.AddCookie(&http.Cookie{
+				token, err := newTestToken()
+				require.NoError(t, err)
+				ctx := context.WithValue(req.Context(), models.CtxKey("userID"), "testUserID")
+				req = req.WithContext(ctx)
+				req.AddCookie(&http.Cookie{
 					Name:  "jwt",
 					Value: token,
 				})
 			}
 
-			resp, err := ts.Client().Do(r)
-			require.NoError(t, err)
+			if tt.expectedStatusCode == http.StatusCreated {
+				// If the request is expected to succeed, set up the expectation
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), tt.longLink).Return("shortened", nil)
+			} else {
+				// If the request is expected to fail, don't expect ShortenURL to be called
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), gomock.Any()).Times(0)
+			}
 
-			defer resp.Body.Close()
+			rr := httptest.NewRecorder()
+			handler.ShortenURL(rr, req)
 
-			require.NoError(t, err)
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
 
-			assert.Equal(t, tt.expectedStatusCode, resp.StatusCode)
-			assert.Equal(t, tt.expectedContentType, resp.Header.Get("Content-Type"))
+			assert.Equal(t, tt.expectedContentType, rr.Header().Get("Content-Type"))
 
-			if tt.authenticated {
-				urls, err := mockStorage.GetUsersURLS(context.Background(), "testUserID", "localhost:8080")
-				require.NoError(t, err)
-				assert.Len(t, urls, 1)
-				assert.Equal(t, urls[0].OriginalURL, tt.longLink)
+		})
+	}
+}
+
+func TestHandlerGetFullURL(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Create a mock repository
+	mockRepo := mocks.NewMockRepository(ctrl)
+
+	// Create a handler with the mock repository
+	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+
+	testCases := []struct {
+		name               string
+		shortURL           string
+		expectedStatusCode int
+		expectedLocation   string
+		repoResult         string // Mocked repository result
+		repoError          error  // Mocked repository error
+	}{
+		{
+			name:               "Successful Retrieval",
+			shortURL:           "localhost:8080/shortened",
+			expectedStatusCode: http.StatusTemporaryRedirect,
+			expectedLocation:   "https://practicum.yandex.ru/",
+			repoResult:         "https://practicum.yandex.ru/",
+		},
+		{
+			name:               "Link does not exist",
+			shortURL:           "localhost:8080/nonexistent",
+			expectedStatusCode: http.StatusNotFound,
+			expectedLocation:   "",
+			repoError:          shared.ErrLinkNotExists, // Empty result to simulate not found
+		},
+		{
+			name:               "Empty Short URL",
+			shortURL:           "",
+			expectedStatusCode: http.StatusBadRequest,
+			expectedLocation:   "",
+			repoResult:         "", // Irrelevant as the URL is empty
+		},
+		{
+			name:               "Link is deleted",
+			shortURL:           "localhost:8080/error",
+			expectedStatusCode: http.StatusGone,
+			expectedLocation:   "",
+			repoError:          shared.ErrLinkDeleted,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			// Mock the repository behavior
+			if tt.shortURL != "" {
+				mockRepo.EXPECT().GetFullURL(gomock.Any(), tt.shortURL).Return(tt.repoResult, tt.repoError)
+			}
+
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			rr := httptest.NewRecorder()
+
+			// Set the URL parameter using chi.URLParam
+			ctx := chi.NewRouteContext()
+			ctx.URLParams.Add("id", tt.shortURL)
+			req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, ctx))
+
+			handler.GetFullURL(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+
+			if tt.expectedStatusCode == http.StatusFound {
+				assert.Equal(t, tt.expectedLocation, rr.Header().Get("Location"))
 			}
 		})
 	}
 }
+
+func TestHandlerShortenURLJSON(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+
+	// Create a mock repository
+	mockRepo := mocks.NewMockRepository(ctrl)
+
+	// Create a handler with the mock repository
+	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+
+	testCases := []struct {
+		name                string
+		requestBody         string
+		longLink            string
+		method              string
+		expectedStatusCode  int
+		expectedContentType string
+		authenticated       bool
+	}{{
+		name:                "authenticated request with valid URL",
+		requestBody:         `{"url": "https://practicum.yandex.ru/"}`,
+		longLink:            "https://practicum.yandex.ru/",
+		method:              http.MethodPost,
+		expectedStatusCode:  http.StatusCreated,
+		expectedContentType: "application/json",
+		authenticated:       true,
+	},
+		{
+			name:                "unauthenticated request with valid URL",
+			requestBody:         `{"url": "https://practicum.yandex.ru/"}`,
+			longLink:            "https://practicum.yandex.ru/",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusUnauthorized,
+			expectedContentType: "text/plain; charset=utf-8",
+			authenticated:       false,
+		},
+		{
+			name:                "authenticated request with invalid URL",
+			requestBody:         `{"url": ""}`,
+			longLink:            "",
+			method:              http.MethodPost,
+			expectedStatusCode:  http.StatusBadRequest,
+			expectedContentType: "",
+			authenticated:       true,
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequest(tt.method, "/shorten", strings.NewReader(tt.requestBody))
+			require.NoError(t, err)
+
+			if tt.authenticated {
+				token, err := newTestToken()
+				require.NoError(t, err)
+				ctx := context.WithValue(req.Context(), models.CtxKey("userID"), "testUserID")
+				req = req.WithContext(ctx)
+				req.AddCookie(&http.Cookie{
+					Name:  "jwt",
+					Value: token,
+				})
+			}
+			if tt.expectedStatusCode == http.StatusCreated {
+				// If the request is expected to succeed, set up the expectation
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), tt.longLink).Return("shortened", nil)
+			} else {
+				// If the request is expected to fail, don't expect ShortenURL to be called
+				mockRepo.EXPECT().ShortenURL(gomock.Any(), gomock.Any()).Times(0)
+			}
+
+			rr := httptest.NewRecorder()
+
+			handler.ShortenURLJSON(rr, req)
+
+			assert.Equal(t, tt.expectedStatusCode, rr.Code)
+
+			assert.Equal(t, tt.expectedContentType, rr.Header().Get("Content-Type"))
+
+		})
+	}
+}
+
+//
+//func TestHandlerShortenURLBatch(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	defer ctrl.Finish()
+//
+//	// Create a mock repository
+//	mockRepo := mocks.NewMockRepository(ctrl)
+//
+//	// Create a handler with the mock repository
+//	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+//
+//}
+//
+//func TestHandlerGetUsersURLS(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	defer ctrl.Finish()
+//
+//	// Create a mock repository
+//	mockRepo := mocks.NewMockRepository(ctrl)
+//
+//	// Create a handler with the mock repository
+//	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+//
+//}
+//
+//func TestHandlerDeleteURLS(t *testing.T) {
+//	ctrl := gomock.NewController(t)
+//	defer ctrl.Finish()
+//
+//	// Create a mock repository
+//	mockRepo := mocks.NewMockRepository(ctrl)
+//
+//	// Create a handler with the mock repository
+//	handler := NewHandler(mockRepo, "localhost:8080", zap.NewNop().Sugar())
+//
+//}

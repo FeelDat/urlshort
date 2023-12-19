@@ -1,3 +1,7 @@
+// Package storage provides a database-backed storage system for URL shortening services.
+//
+// The package uses a SQL database for persistent storage and supports batch processing of URLs.
+
 package storage
 
 import (
@@ -5,15 +9,17 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/FeelDat/urlshort/internal/app/models"
-	"github.com/FeelDat/urlshort/internal/utils"
+	"github.com/FeelDat/urlshort/internal/shared"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5/pgconn"
+	errors2 "github.com/pkg/errors"
 	"go.uber.org/zap"
 	"log"
 	"math/rand"
 	"time"
 )
 
+// Repository defines the set of methods that a storage system must implement.
 type Repository interface {
 	ShortenURL(ctx context.Context, fullLink string) (string, error)
 	GetFullURL(ctx context.Context, shortLink string) (string, error)
@@ -22,14 +28,19 @@ type Repository interface {
 	DeleteURLS(ctx context.Context, userID string, shortLink []string, logger *zap.SugaredLogger)
 }
 
+// dbStorage implements the Repository interface using a SQL database.
 type dbStorage struct {
-	db *sql.DB
+	db *sql.DB // The SQL database connection.
 }
 
+// NewDBStorage initializes and returns a new dbStorage instance.
 func NewDBStorage(db *sql.DB) Repository {
 	return &dbStorage{db: db}
 }
 
+// InitDB initializes the database by creating required tables and indexes.
+//
+// This function is meant to be called during the application's startup.
 func InitDB(ctx context.Context, db *sql.DB) error {
 	ctrl, cancel := context.WithTimeout(ctx, time.Millisecond*500)
 	defer cancel()
@@ -42,17 +53,22 @@ func InitDB(ctx context.Context, db *sql.DB) error {
 
 	_, err = db.ExecContext(ctrl, "CREATE TABLE IF NOT EXISTS urls(id serial primary key, delflag boolean DEFAULT false, uuid varchar(36), short_url varchar(20), original_url text)")
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "Could not create urls table on db init")
 	}
 
 	_, err = db.ExecContext(ctrl, "CREATE UNIQUE INDEX IF NOT EXISTS original_url_unique ON urls(original_url)")
 	if err != nil {
-		return err
+		return errors2.Wrap(err, "Could not create index on db init")
 	}
 
-	return tx.Commit()
+	err = tx.Commit()
+	if err != nil {
+		return errors2.Wrap(err, "Could not perform db init transaction")
+	}
+	return err
 }
 
+// DeleteURLS deletes a set of URLs associated with a given user ID from the database.
 func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []string, logger *zap.SugaredLogger) {
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -70,6 +86,7 @@ func (s *dbStorage) DeleteURLS(ctx context.Context, userID string, shortLinks []
 	tx.Commit()
 }
 
+// GetUsersURLS retrieves all the URLs associated with a given user ID from the database.
 func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr string) ([]models.UsersURLS, error) {
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
@@ -98,9 +115,12 @@ func (s *dbStorage) GetUsersURLS(ctx context.Context, userID string, baseAddr st
 	return urls, err
 }
 
+// ShortenURL inserts a new shortened URL into the database.
+//
+// If a URL is already present, it returns the previously shortened URL.
 func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, error) {
 
-	urlID := utils.Base62Encode(rand.Uint64())
+	urlID := shared.Base62Encode(rand.Uint64())
 	uid := ctx.Value(models.CtxKey("userID"))
 
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
@@ -118,6 +138,9 @@ func (s *dbStorage) ShortenURL(ctx context.Context, fullLink string) (string, er
 	return urlID, nil
 }
 
+// GetFullURL retrieves the original URL for a given shortened URL from the database.
+//
+// Returns an error if the URL is marked as deleted or does not exist.
 func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, error) {
 
 	var originalURL string
@@ -126,28 +149,27 @@ func (s *dbStorage) GetFullURL(ctx context.Context, shortLink string) (string, e
 	ctrl, cancel := context.WithTimeout(ctx, time.Second*2)
 	defer cancel()
 
-	//check if link is deleted
-	err := s.db.QueryRowContext(ctrl, `SELECT delflag FROM urls WHERE short_url = $1`, shortLink).Scan(&isDeleted)
+	query := `SELECT delflag, original_url FROM urls WHERE short_url = $1`
+	err := s.db.QueryRowContext(ctrl, query, shortLink).Scan(&isDeleted, &originalURL)
+
+	// Check for errors from the query
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return "", errors.New("link does not exist")
+			return "", shared.ErrLinkNotExists
 		}
 		return "", err
 	}
+
+	// If the link is deleted
 	if isDeleted {
-		return "", errors.New("link is deleted")
-	}
-	err = s.db.QueryRowContext(ctrl, `SELECT original_url FROM urls WHERE short_url = $1`, shortLink).Scan(&originalURL)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return "", errors.New("link does not exist")
-		}
-		return "", err
+		return "", shared.ErrLinkDeleted
 	}
 
 	return originalURL, nil
+
 }
 
+// ShortenURLBatch inserts a batch of original URLs into the database and returns the corresponding shortened URLs.
 func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatchRequest, baseAddr string) ([]models.URLRBatchResponse, error) {
 
 	if len(batch) == 0 {
@@ -163,7 +185,7 @@ func (s *dbStorage) ShortenURLBatch(ctx context.Context, batch []models.URLBatch
 	responses := make([]models.URLRBatchResponse, len(batch))
 
 	for i, req := range batch {
-		urlID := utils.Base62Encode(rand.Uint64())
+		urlID := shared.Base62Encode(rand.Uint64())
 		uid := ctx.Value(models.CtxKey("userID"))
 		_, err = tx.ExecContext(ctx, `INSERT INTO urls(uuid, short_url, original_url) VALUES($1, $2, $3)`, uid, urlID, req.OriginalURL)
 		if err != nil {

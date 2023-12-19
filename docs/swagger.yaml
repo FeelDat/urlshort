@@ -1,0 +1,92 @@
+basePath: /
+definitions:
+  models.JSONRequest:
+    properties:
+      url:
+        type: string
+    type: object
+  models.URLBatchRequest:
+    properties:
+      correlation_id:
+        type: string
+      original_url:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: This is a URL shortener service API.
+  title: URL Shortener API
+  version: "1.0"
+paths:
+  /{id}:
+    get:
+      description: Retrieve the original URL using the shortened one.
+      parameters:
+      - description: Shortened URL ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses: {}
+  /shorten/batch:
+    post:
+      consumes:
+      - application/json
+      description: Shorten a batch of URLs.
+      parameters:
+      - description: List of URLs to shorten
+        in: body
+        name: urls
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/models.URLBatchRequest'
+          type: array
+      produces:
+      - application/json
+      responses: {}
+  /shorten/json:
+    post:
+      consumes:
+      - application/json
+      description: Shorten a given URL and return in JSON format.
+      parameters:
+      - description: URL to shorten
+        in: body
+        name: url
+        required: true
+        schema:
+          $ref: '#/definitions/models.JSONRequest'
+      produces:
+      - application/json
+      responses: {}
+  /urls:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a batch of URLs for the authenticated user.
+      parameters:
+      - description: List of URLs to delete
+        in: body
+        name: urls
+        required: true
+        schema:
+          items:
+            type: string
+          type: array
+      produces:
+      - application/json
+      responses: {}
+  /users/urls:
+    get:
+      description: Get all URLs shortened by the authenticated user.
+      produces:
+      - application/json
+      responses: {}
+schemes:
+- http
+- https
+swagger: "2.0"

@@ -1,3 +1,4 @@
+// Package custommiddleware provides custom middlewares for use in an HTTP server.
 package custommiddleware
 
 import (
@@ -9,16 +10,22 @@ import (
 	"time"
 )
 
+// AuthMiddleware is a struct responsible for handling authentication via JWT.
 type AuthMiddleware struct {
 	key string
 }
 
+// NewAuthMiddleware initializes and returns an instance of AuthMiddleware
+// with the JWT key retrieved from the environment variable JWT_KEY.
 func NewAuthMiddleware() *AuthMiddleware {
 	return &AuthMiddleware{
 		key: os.Getenv("JWT_KEY"),
 	}
 }
 
+// AuthMiddleware is a middleware function that checks for the presence and validity
+// of a JWT token in the request's cookies. If no valid token is found, a new one is created
+// and set as a cookie in the response.
 func (m *AuthMiddleware) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -47,6 +54,7 @@ func (m *AuthMiddleware) AuthMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+// validToken checks the validity of a given JWT token.
 func (m *AuthMiddleware) validToken(t string) bool {
 	token, err := jwt.Parse(t, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
@@ -62,13 +70,15 @@ func (m *AuthMiddleware) validToken(t string) bool {
 	return true
 }
 
+// createToken generates a new JWT token with claims that include a new userID,
+// an authorization flag set to true, and an expiration set 24 hours from the creation time.
 func (m *AuthMiddleware) createToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	userID := uuid.NewString()
 
 	claims["authorized"] = true
-	claims["userID"] = userID // Установите имя пользователя или идентификатор здесь
+	claims["userID"] = userID
 	claims["exp"] = time.Now().Add(time.Hour * 24).Unix()
 
 	m.key = "8PNHgjK2kPunGpzMgL0ZmMdJCRKy2EnL/Cg0GbnELLI="
