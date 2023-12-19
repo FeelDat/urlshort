@@ -91,6 +91,18 @@ func main() {
 	r.Mount("/debug", middleware.Profiler())
 	r.Mount("/", routers.ShortenerRouter(h))
 
+	r.Get("/ping", func(w http.ResponseWriter, r *http.Request) {
+		if conf.DatabaseAddress == "" {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		if err := db.Ping(); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	})
+
 	// Starting HTTP server
 	err = http.ListenAndServe(conf.ServerAddress, r)
 	if err != nil {
